@@ -54,6 +54,7 @@ avgDiffPlot <- function(rlist1, rlist2, var, minTemp) {
     assign(paste0("c",i), merge(g1[g1$RoomName==rlist1[i],], g2[g2$RoomName==rlist2[i],], by=c("rdt", "rt", "month", "rd"), suffixes = c("1","2")))
     assign(paste0("c",i), mutate(get(paste0("c",i)), TempDiff=Temp1-Temp2))
   }
+  if (length(rlist1 == 1)) {names(c1)[names(c1) == "TempDiff"] <- "TempDiff1"}
 
   # Labels
   if (var=="Floor") {
@@ -75,7 +76,7 @@ avgDiffPlot <- function(rlist1, rlist2, var, minTemp) {
     if(length(rlist1) %% 2 !=0) {names(c)[names(c) == "TempDiff"] <- paste0("TempDiff", length(rlist1))}
   } else {
     c <- c1
-    c$AvgTempDiff <- c1$TempDiff
+    c$AvgTempDiff <- c1$TempDiff1
   }
 
   c.sum <- ddply(c, c("rt", "month"), summarise, totavg=mean(AvgTempDiff))
