@@ -72,6 +72,7 @@ avgDiffPlot <- function(rlist1, rlist2, var, minTemp) {
       else {c <- merge(c, other[c(1,2,3,4,5,11,17)], by=c("rdt", "rt", "month", "rd"), suffixes=c(i-1,i),  all.x=TRUE, all.y=TRUE)}
     }    
     c$AvgTempDiff <- rowMeans(c[,grepl("Diff", names(c))], na.rm=TRUE)
+    if(length(rlist1) %% 2 !=0) {names(c)[names(c) == "TempDiff"] <- paste0("TempDiff", length(rlist1))}
   } else {
     c <- c1
     c$AvgTempDiff <- c1$TempDiff
@@ -79,12 +80,13 @@ avgDiffPlot <- function(rlist1, rlist2, var, minTemp) {
 
   c.sum <- ddply(c, c("rt", "month"), summarise, totavg=mean(AvgTempDiff))
   for (i in 1:length(rlist1)) {
-    j <- i-1
     colName <- paste0("TempDiff",i)
     assign(paste0("c",i,".sum"), do.call("ddply",list(c, c("rt", "month"), summarize, avg = call("mean",as.symbol(colName)))))
     other <- get(paste0("c",i,".sum"))
     c.sum <- merge(c.sum, other, by=c("rt", "month"), suffixes=c(i,i-1))
   }
+  if(length(rlist1) %% 2 !=0) {names(c.sum)[names(c.sum) == "avg"] <- paste0("avg", length(rlist1))}
+  
   
   c.sum <- melt(c.sum, id.vars = c("rt", "month"))
   c.sum$monthdisp <- factor(c.sum$month, c("August", "September", "October", "November", "December", "January", "February", "March", "April", "May"))
@@ -110,12 +112,12 @@ avgDiffPlot <- function(rlist1, rlist2, var, minTemp) {
   
   hotc.sum <- ddply(hotc, c("rt", "month"), summarise, totavg=mean(AvgTempDiff))
   for (i in 1:length(rlist1)) {
-    j <- i-1
     colName <- paste0("TempDiff",i)
     assign(paste0("hotc",i,".sum"), do.call("ddply",list(hotc, c("rt", "month"), summarize, avg = call("mean",as.symbol(colName)))))
     other <- get(paste0("hotc",i,".sum"))
     hotc.sum <- merge(hotc.sum, other, by=c("rt", "month"), suffixes=c(i,i-1))
   }
+  if(length(rlist1) %% 2 !=0) {names(hotc.sum)[names(hotc.sum) == "avg"] <- paste0("avg", length(rlist1))}
   
   hotc.sum <- melt(hotc.sum, id.vars = c("rt", "month"))
   hotc.sum$monthdisp <- factor(hotc.sum$month, c("August", "September", "October", "November", "December", "January", "February", "March", "April", "May"))
