@@ -24,11 +24,11 @@ avgTempPlot <- function(rlist, minTemp) {
   #allcsv$month <- format(allcsv$rd, "%B")
   #allcsv <- merge(allcsv, s, by="rd", all.x=FALSE)
   #allcsv$Alias <- as.character(allcsv$Alias)
-  #allcsv <- allcsv[(as.character(substr(allcsv$rdt, 12, 13)) %in% c('08', '09', '10', '11', '12', '13') | allcsv$rt=="14:00"),]
+  #allcsv <<- allcsv[(as.character(substr(allcsv$rdt, 12, 13)) %in% c('08', '09', '10', '11', '12', '13') | allcsv$rt=="14:00"),]
   
   
   ### Average monthly temperatures for all school hour/days
-  o <- read.csv(file="~/dropbox/roundhouseone/HIDOE thermal comfort/outdoortemp.csv", sep=",")
+  o <- read.csv(file="~/dropbox/rh1/hidoe/outdoortemp.csv", sep=",")
   o$rdt <- as.POSIXct(o$DateTime, format="%m/%d/%y %H:%M")
   o$rd <- as.Date(o$DateTime, format="%m/%d/%y")
   o$rt <- format(strptime(o$DateTime, format="%m/%d/%y %H:%M"), format="%H:%M")
@@ -52,16 +52,16 @@ avgTempPlot <- function(rlist, minTemp) {
     geom_line(data=o.sum, aes(x=rt, y=avg, group=1), color="gray") +
     geom_line(data=room1.sum, aes(x=rt, y=avg, group=1), color="dodgerblue4") +
     geom_line(data=room2.sum, aes(x=rt, y=avg, group=1), color="firebrick") +
-    geom_line(data=room3.sum, aes(x=rt, y=avg, group=1), color="springgreen4") +
     facet_wrap(~monthdisp, ncol=10) +
     scale_x_datetime(breaks=date_breaks("2 hour"), labels=date_format("%H:%M")) +
     ylim(70,95) +
     theme_bw() 
   
   if (length(rlist) == 2) {
-    pa + labs(x="", y="", title=paste(r1.name, r2.name, sep=" vs. "))
+    pa <- pa + labs(x="", y="", title=paste(r1.name, r2.name, sep=" vs. "))
   } else {
-    pa + labs(x="", y="", title=paste(r1.name, r2.name, r3.name, sep=" vs. "))
+    pa <- pa + geom_line(data=room3.sum, aes(x=rt, y=avg, group=1), color="springgreen4") +
+         labs(x="", y="", title=paste(r1.name, r2.name, r3.name, sep=" vs. "))
   }
   
   
@@ -88,17 +88,16 @@ avgTempPlot <- function(rlist, minTemp) {
     ylim(70,95) +
     labs(x="", y=expression(paste("Temperature ( ", degree ~ F, " )"))) +
     theme_bw()
-  if (length(rlist) == 3) {ph + geom_line(data=hotroom3.sum, aes(x=rt, y=avg, group=1), color="springgreen4")}
+  if (length(rlist) == 3) {ph <- ph + geom_line(data=hotroom3.sum, aes(x=rt, y=avg, group=1), color="springgreen4")}
   
    
   ###  Monthly school hour/day with largest temperature differential between classrooms 
   d <- merge(room1[,c("rd", "rt", "month", "Temp")], room2[,c("rd", "rt", "Temp")], by=c("rd", "rt"), suffixes=c("1","2"))
-  if (length(rlist==3)) {
-    colnames(room3)[5] <- "Temp3"
-    d <- merge(d, room3[,c("rd", "rt","Temp3")], by=c("rd", "rt"))
-    d$tempDiff <- d$Temp1-d$Temp3
+  if (length(rlist)==3) {
+    d <- merge(d, room3[,c("rd", "rt","Temp")], by=c("rd", "rt"))
+    d$TempDiff <- d$Temp1-d$Temp
   } else {d$TempDiff <- d$Temp1 - d$Temp2}
-  maxDiffRows <- do.call("rbind", by(d, d$month, function(d) d[which.max(abs(d$tempDiff)),]))
+  maxDiffRows <- do.call("rbind", by(d, d$month, function(d) d[which.max(abs(d$TempDiff)),]))
   rownames(maxDiffRows) <- NULL 
   
   hottesto <- merge(o, maxDiffRows[c(1,3)], by=c("rd", "month"), all.x=FALSE)
@@ -111,22 +110,20 @@ avgTempPlot <- function(rlist, minTemp) {
     assign(paste0("hottestroom",i), mutate(get(paste0("hottestroom",i)), rt=as.POSIXct(rt, format="%H:%M", tz="UTC")))
   }
   
- 
   # Annotation and plot
   maxDiffRows$rd <- format(maxDiffRows$rd, format="%b %d, %Y")
   maxDiffRows$x <- as.POSIXct(format(strptime("01/01/16 9:00", format="%m/%d/%y %H:%M"), format="%H:%M"), format="%H:%M", tz="UTC")
   maxDiffRows$y <- 65
   maxDiffRows$y2 <- 63
   maxDiffRows$lab1 <-   as.character(paste(maxDiffRows$rd, maxDiffRows$rt, sep=" "))
-  maxDiffRows$lab2 <- as.character(round(maxDiffRows$tempDiff,2))
+  maxDiffRows$lab2 <- as.character(round(maxDiffRows$TempDiff,2))
   maxDiffRows$monthdisp <- factor(maxDiffRows$month, c("August", "September", "October", "November", "December", "January", "February", "March", "April", "May"))
   maxDiffRows <- maxDiffRows[-c(1,2,4,5,6)]
-
   
   pd <- ggplot() +
     geom_line(data=hottesto, aes(x=rt, y=Temp, group=1), color="gray") +
-    geom_line(data=hottestroom1, aes(x=rt, y=Temp1, group=1), color="dodgerblue4") +
-    geom_line(data=hottestroom2,  aes(x=rt, y=Temp2, group=1), color="firebrick") +
+    geom_line(data=hottestroom1, aes(x=rt, y=Temp, group=1), color="dodgerblue4") +
+    geom_line(data=hottestroom2, aes(x=rt, y=Temp, group=1), color="firebrick") +
     facet_wrap(~monthdisp, ncol=10, drop=FALSE) +
     scale_x_datetime(breaks=date_breaks("2 hour"), labels=date_format("%H:%M")) +
     ylim(60,100) +
@@ -134,9 +131,8 @@ avgTempPlot <- function(rlist, minTemp) {
     theme_bw() +
     geom_text(data=maxDiffRows, aes(x, y, label=lab1, group=1), color="dimgrey", size=3, hjust=0) + 
     geom_text(data=maxDiffRows, aes(x, y2, label=paste("Max Difference:", lab2, "F", sep=" "), group=1), color="dimgrey", size=3, hjust=0)
-  if (length(rlist) == 3) {pd + geom_line(data=hottestroom3, aes(x=rt, y=Temp3, group=1), color="springgreen4")}
+  if (length(rlist) == 3) {pd <- pd + geom_line(data=hottestroom3, aes(x=rt, y=Temp, group=1), color="springgreen4")}
  
-   
   room1.label <- room1[1,c(8,9,10,11,12,13,14,15)]
   room2.label <- room2[1,c(8,9,10,11,12,13,14,15)]
   labels <- rbind(room1.label, room2.label)

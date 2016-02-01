@@ -38,7 +38,7 @@ avgDiffPlot <- function(rlist1, rlist2, var, minTemp) {
   #allcsv <<- allcsv[(as.character(substr(allcsv$rdt, 12, 13)) %in% c('08', '09', '10', '11', '12', '13') | allcsv$rt=="14:00"),]
   
   # Outside temperature 
-  o <- read.csv(file="~/dropbox/roundhouseone/HIDOE thermal comfort/outdoortemp.csv", sep=",")
+  o <- read.csv(file="~/dropbox/rh1/hidoe/outdoortemp.csv", sep=",")
   o$rdt <- as.POSIXct(o$DateTime, format="%m/%d/%y %H:%M")
   o$rd <- as.Date(o$DateTime, format="%m/%d/%y")
   o$rt <- format(strptime(o$DateTime, format="%m/%d/%y %H:%M"), format="%H:%M")
