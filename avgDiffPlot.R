@@ -54,7 +54,7 @@ avgDiffPlot <- function(rlist1, rlist2, var, minTemp) {
     assign(paste0("c",i), merge(g1[g1$RoomName==rlist1[i],], g2[g2$RoomName==rlist2[i],], by=c("rdt", "rt", "month", "rd"), suffixes = c("1","2")))
     assign(paste0("c",i), mutate(get(paste0("c",i)), TempDiff=Temp1-Temp2))
   }
-  if (length(rlist1 == 1)) {names(c1)[names(c1) == "TempDiff"] <- "TempDiff1"}
+  if (length(rlist1) == 1) {names(c1)[names(c1) == "TempDiff"] <- "TempDiff1"}
 
   # Labels
   if (var=="Floor") {
@@ -105,7 +105,17 @@ avgDiffPlot <- function(rlist1, rlist2, var, minTemp) {
     labs(x="", y=expression(paste("Temperature Difference ( ", degree ~ F, " )"))) +
     ggtitle(bquote(atop(.(plot.title), atop(.(plot.subtitle), "")))) +
     theme_bw() 
-
+  
+  
+  #maxDiffRows <- do.call("rbind", by(d, d$month, function(d) d[which.max(abs(d$TempDiff)),]))
+  #maxDiffRows$rd <- format(maxDiffRows$rd, format="%b %d, %Y")
+  #maxDiffRows$x <- as.POSIXct(format(strptime("01/01/16 9:00", format="%m/%d/%y %H:%M"), format="%H:%M"), format="%H:%M", tz="UTC")
+  #maxDiffRows$y <- 65
+  #maxDiffRows$y2 <- 63
+  #maxDiffRows$lab1 <-   as.character(paste(maxDiffRows$rd, maxDiffRows$rt, sep=" "))
+  #maxDiffRows$lab2 <- as.character(round(maxDiffRows$TempDiff,2))
+  #maxDiffRows$monthdisp <- factor(maxDiffRows$month, c("August", "September", "October", "November", "December", "January", "February", "March", "April", "May"))
+  #maxDiffRows <- maxDiffRows[-c(1,2,4,5,6)]
  
   ### Average monthly temperature on school hour/days where outdoor temperature is above certain threshold
   hoto <- o[o$Temp >= as.numeric(minTemp),]
