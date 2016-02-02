@@ -93,8 +93,8 @@ avgDiffPlot <- function(rlist1, rlist2, var, minTemp) {
   rownames(maxDiffRows) <- NULL 
   #maxDiffRows$rd <- format(maxDiffRows$rd, format="%b %d, %Y")
   maxDiffRows$x <- as.POSIXct(format(strptime("01/01/16 9:00", format="%m/%d/%y %H:%M"), format="%H:%M"), format="%H:%M", tz="UTC")
-  maxDiffRows$y <- min(c.sum$totavg) - 2
-  #maxDiffRows$y <- .05
+  #maxDiffRows$y <- min(c.sum$totavg) - 2
+  maxDiffRows$y <- -7
   maxDiffRows$lab <- as.character(round(maxDiffRows$totavg,2))
   maxDiffRows$monthdisp <- factor(maxDiffRows$month, c("August", "September", "October", "November", "December", "January", "February", "March", "April", "May"))
   maxDiffRows <- maxDiffRows[c("monthdisp", "x", "y", "lab")]
@@ -112,6 +112,7 @@ avgDiffPlot <- function(rlist1, rlist2, var, minTemp) {
     geom_line(data=c.sum[c.sum$variable=="totavg",], aes(x=rt, y=value, group=1), color="dimgrey", size=1) +
     facet_wrap(~monthdisp, ncol=10, drop=FALSE) +
     scale_x_datetime(breaks=date_breaks("2 hour"), labels=date_format("%H:%M")) +
+    ylim(-8,8) +
     labs(x="", y=expression(paste("Temperature Difference ( ", degree ~ F, " )"))) +
     ggtitle(bquote(atop(.(plot.title), atop(.(plot.subtitle), "")))) +
     theme_bw() +
@@ -136,8 +137,8 @@ avgDiffPlot <- function(rlist1, rlist2, var, minTemp) {
   hotMaxDiffRows <- do.call("rbind", by(hotc.sum, hotc.sum$month, function(x) x[which.max(abs(x$totavg)),]))
   rownames(hotMaxDiffRows) <- NULL 
   hotMaxDiffRows$x <- as.POSIXct(format(strptime("01/01/16 9:00", format="%m/%d/%y %H:%M"), format="%H:%M"), format="%H:%M", tz="UTC")
-  hotMaxDiffRows$y <- min(hotc.sum$totavg) - 2
-  #hotMaxDiffRows$y <- .05
+  #hotMaxDiffRows$y <- min(hotc.sum$totavg) - 2
+  hotMaxDiffRows$y <- -7
   hotMaxDiffRows$lab <- as.character(round(hotMaxDiffRows$totavg,2))
   hotMaxDiffRows$monthdisp <- factor(hotMaxDiffRows$month, c("August", "September", "October", "November", "December", "January", "February", "March", "April", "May"))
   hotMaxDiffRows <- hotMaxDiffRows[c("monthdisp", "x", "y", "lab")]
@@ -152,6 +153,7 @@ avgDiffPlot <- function(rlist1, rlist2, var, minTemp) {
     geom_line(data=hotc.sum[hotc.sum$variable=="totavg",], aes(x=rt, y=value, group=1), color="dimgrey", size=1) +
     facet_wrap(~monthdisp, ncol=10, drop=FALSE) +
     scale_x_datetime(breaks=date_breaks("2 hour"), labels=date_format("%H:%M")) +
+    ylim(-8,8) +
     labs(x="Time", y=expression(paste("Temperature Difference ( ", degree ~ F, " )"))) +
     theme_bw() +
     geom_text(data=hotMaxDiffRows, aes(x, y, label=paste("Max Difference:", lab, "F", sep=" "), group=1), color="dimgrey", size=3, hjust=0)
