@@ -58,10 +58,10 @@ avgTempPlot <- function(rlist, minTemp) {
     theme_bw() 
   
   if (length(rlist) == 2) {
-    pa <- pa + labs(x="", y="", title=paste(r1.name, r2.name, sep=" vs. "))
+    pa <- pa + labs(x="", y=expression(paste("Temperature ( ", degree ~ F, " )")), title=paste(r1.name, r2.name, sep=" vs. "))
   } else {
     pa <- pa + geom_line(data=room3.sum, aes(x=rt, y=avg, group=1), color="springgreen4") +
-         labs(x="", y="", title=paste(r1.name, r2.name, r3.name, sep=" vs. "))
+         labs(x="", y=expression(paste("Temperature ( ", degree ~ F, " )")), title=paste(r1.name, r2.name, r3.name, sep=" vs. "))
   }
   
   
@@ -127,7 +127,7 @@ avgTempPlot <- function(rlist, minTemp) {
     facet_wrap(~monthdisp, ncol=10, drop=FALSE) +
     scale_x_datetime(breaks=date_breaks("2 hour"), labels=date_format("%H:%M")) +
     ylim(60,100) +
-    labs(x="Time", y="") +
+    labs(x="Time", y=expression(paste("Temperature ( ", degree ~ F, " )"))) +
     theme_bw() +
     geom_text(data=maxDiffRows, aes(x, y, label=lab1, group=1), color="dimgrey", size=3, hjust=0) + 
     geom_text(data=maxDiffRows, aes(x, y2, label=paste("Max Difference:", lab2, "F", sep=" "), group=1), color="dimgrey", size=3, hjust=0)
