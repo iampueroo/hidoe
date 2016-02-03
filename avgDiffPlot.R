@@ -84,7 +84,7 @@ avgDiffPlot <- function(rlist1, rlist2, var, minTemp) {
     colName <- paste0("TempDiff",i)
     assign(paste0("c",i,".sum"), do.call("ddply",list(c, c("rt", "month"), summarize, avg = call("mean",as.symbol(colName)))))
     other <- get(paste0("c",i,".sum"))
-    c.sum <- merge(c.sum, other, by=c("rt", "month"), suffixes=c(i,i-1))
+    c.sum <- merge(c.sum, other, by=c("rt", "month"), suffixes=c(i-1,i))
   }
   if(length(rlist1) %% 2 !=0) {names(c.sum)[names(c.sum) == "avg"] <- paste0("avg", length(rlist1))}
   
@@ -104,7 +104,7 @@ avgDiffPlot <- function(rlist1, rlist2, var, minTemp) {
   c.sum$rt <- as.POSIXct(c.sum$rt, format="%H:%M", tz="UTC")
   
   plot.title <- paste(var, paste(l1, l2, sep=" vs. "), sep=": ")
-  plot.subtitle <- "(temperature difference defined as first group minus second group)"
+  plot.subtitle <- "(positive temperature difference indicates first-listed cluster is hotter)"
   
   pa <- ggplot() +
     geom_hline(yintercept = 0, linetype="dotted", alpha=0.5, color='firebrick') + 
@@ -129,7 +129,7 @@ avgDiffPlot <- function(rlist1, rlist2, var, minTemp) {
     colName <- paste0("TempDiff",i)
     assign(paste0("hotc",i,".sum"), do.call("ddply",list(hotc, c("rt", "month"), summarize, avg = call("mean",as.symbol(colName)))))
     other <- get(paste0("hotc",i,".sum"))
-    hotc.sum <- merge(hotc.sum, other, by=c("rt", "month"), suffixes=c(i,i-1))
+    hotc.sum <- merge(hotc.sum, other, by=c("rt", "month"), suffixes=c(i-1,i))
   }
   if(length(rlist1) %% 2 !=0) {names(hotc.sum)[names(hotc.sum) == "avg"] <- paste0("avg", length(rlist1))}
   
