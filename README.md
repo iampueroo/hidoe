@@ -10,5 +10,5 @@
 ###### avgDiffPlot.R
   > plots school day/hour temperature differences for like clusters of classroom comparisons
   
-    1. averaged by month and time for all observations - average temperature difference overlayed on each comparison's difference
+    1. averaged by month and time for all observations - average difference overlayed on individual comparisons
     2. averaged by month and time for observations where outside temperature is above "minTemp"
