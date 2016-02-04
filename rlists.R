@@ -153,7 +153,7 @@ CD305 <- c("Campbell - D305")
 CD312 <- c("Campbell - D312")
 CO104 <- c("Campbell - O104")
 CO204 <- c("Campbell - O204")
-CO207 <- c("Campbell - O107")
+CO207 <- c("Campbell - O207")
 CO304 <- c("Campbell - O304")
 CO310 <- c("Campbell - O310")
 CD102 <- c("Campbell - D102") #SE,NW
