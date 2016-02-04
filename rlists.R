@@ -50,8 +50,8 @@ ID201 <- c("Ilima - D201")
 ID202 <- c("Ilima - D202")
 KE203 <- c("Kaimiloa - E203")
 KE206 <- c("Kaimiloa - E206")
-KF205 <- c("Kaimiloa - F213")
-KF206 <- c("Kaimiloa - F214")
+KF213 <- c("Kaimiloa - F213")
+KF214 <- c("Kaimiloa - F214")
 
 CD102 <- c("Campbell - D102") #ground
 CD105 <- c("Campbell - D105")
