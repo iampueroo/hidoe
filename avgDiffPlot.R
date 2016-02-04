@@ -113,24 +113,29 @@ avgDiffPlot <- function(rlist1, rlist2, var, minTemp) {
   for (i in 1:length(rlist1)) {
     if (abs(aggregate(a["value"], list(variable=a$variable), mean, na.rm=TRUE)[i+1,2]) > abs(3*(aggregate(a["value"], list(variable=a$variable), mean, na.rm=TRUE))[1,2])) {
       needsLabel[i] <- 1
+      
       # Dynamically input label position based on month and time (adjusted) of the absolute maximum value 
-      assign(paste0("ann",i), data.frame(rt=as.POSIXct(format(strptime("01/01/16 11:00", format="%m/%d/%y %H:%M"), format="%H:%M"), format="%H:%M", tz="UTC"),
-                                         value=5,
-                                         lab=paste(paste0(paste0(substr(rlist1[7],1,1),"-"), sub(".*- ", "", rlist1[i])),paste0(paste0(substr(rlist2[7],1,1),"-"),sub(".*- ", "", rlist2[i])), sep=" vs. "),
-                                         monthdisp = factor("August", levels=orderedMonths)))
+      tmp <- a[a$variable == paste0("avg",i),]
+      max <- tmp[which.max(abs(tmp$value)),]
+      if (as.character(substr(max$rt,12,13) %in% c('08', '09'))) {max$rt <- max$rt+1.5*60*60
+      } else if (as.character(substr(max$rt,12,13) %in% c('13', '14'))) {max$rt <- max$rt-1.5*60*60}
+      assign(paste0("ann",i), data.frame(rt=max$rt,
+                                         value=max$value,
+                                         lab=paste(paste0(paste0(substr(rlist1[i],1,1),"-"), sub(".*- ", "", rlist1[i])),paste0(paste0(substr(rlist2[i],1,1),"-"),sub(".*- ", "", rlist2[i])), sep=" vs. "),
+                                         monthdisp = factor(max$month, levels=orderedMonths)))
     }
   }
-  
+
+
   plot.title <- paste(var, paste(l1, l2, sep=" vs. "), sep=": ")
   plot.subtitle <- "(positive temperature difference indicates first-listed cluster is hotter)"
   
   pa <- ggplot() +
-    geom_hline(yintercept = 0, linetype="dotted", alpha=0.5, color='firebrick') + 
+    geom_hline(yintercept = 0, linetype="dotted", alpha=0.5, color='#FC4F30') + 
     geom_line(data=a[a$variable!="totavg",], aes(x=rt, y=value, group = variable), color="#30A2DA", size=0.5, alpha=0.35) +
     geom_line(data=a[a$variable=="totavg",], aes(x=rt, y=value, group=1), color="dimgrey", size=1) +
     facet_wrap(~monthdisp, ncol=10, drop=FALSE) +
     scale_x_datetime(breaks=date_breaks("2 hour"), labels=date_format("%H:%M")) +
-    ylim(-8,8) +
     labs(x="", y="") +
     ggtitle(bquote(atop(.(plot.title), atop(.(plot.subtitle), "")))) +
     theme_bw() +
@@ -159,12 +164,11 @@ avgDiffPlot <- function(rlist1, rlist2, var, minTemp) {
   aHot$rt <- as.POSIXct(aHot$rt, format="%H:%M", tz="UTC")
   
   ph <- ggplot() +
-    geom_hline(yintercept = 0, linetype="dotted", alpha=0.5, color='firebrick') + 
+    geom_hline(yintercept = 0, linetype="dotted", alpha=0.5, color='#FC4F30') + 
     geom_line(data=aHot[aHot$variable!="totavg",], aes(x=rt, y=value, group = variable), color="#30A2DA", size=0.5, alpha=0.35) +
     geom_line(data=aHot[aHot$variable=="totavg",], aes(x=rt, y=value, group=1), color="dimgrey", size=1) +
     facet_wrap(~monthdisp, ncol=10, drop=FALSE) +
     scale_x_datetime(breaks=date_breaks("2 hour"), labels=date_format("%H:%M")) +
-    ylim(-8,8) +
     labs(x="Time", y="") +
     theme_bw() +
     theme(legend.position="none") +
