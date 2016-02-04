@@ -94,20 +94,22 @@ avgDiffPlot <- function(rlist1, rlist2, var, minTemp) {
     names(aHot)[names(aHot) == "avg"] <- paste0("avg", length(rlist1))
   } 
   
-  # Annotation 
+  # Begin annotation 
   maxDiffRows <- do.call("rbind", by(a, a$month, function(x) x[which.max(abs(x$totavg)),])) #get max of average difference by month
   rownames(maxDiffRows) <- NULL 
+
+  a <- melt(a, id.vars = c("rt", "month"))
+  a$monthdisp <- factor(a$month, orderedMonths)
+  a$rt <- as.POSIXct(a$rt, format="%H:%M", tz="UTC")
+ 
+  # Continue annotation
   maxDiffRows$x <- as.POSIXct(format(strptime("01/01/16 9:00", format="%m/%d/%y %H:%M"), format="%H:%M"), format="%H:%M", tz="UTC")
-  #maxDiffRows$y <- min(c.sum$totavg) - 2
+  #maxDiffRows$y <- min(a$value) + 2
   maxDiffRows$y <- -7
   maxDiffRows$lab <- as.character(round(maxDiffRows$totavg,2))
   maxDiffRows$monthdisp <- factor(maxDiffRows$month, orderedMonths)
   maxDiffRows <- maxDiffRows[c("monthdisp", "x", "y", "lab")]
   
-  a <- melt(a, id.vars = c("rt", "month"))
-  a$monthdisp <- factor(a$month, orderedMonths)
-  a$rt <- as.POSIXct(a$rt, format="%H:%M", tz="UTC")
- 
   # Find outlier comparisons for lablelling purposes 
   needsLabel <- list()
   for (i in 1:length(rlist1)) {
@@ -126,7 +128,6 @@ avgDiffPlot <- function(rlist1, rlist2, var, minTemp) {
     }
   }
 
-
   plot.title <- paste(var, paste(l1, l2, sep=" vs. "), sep=": ")
   plot.subtitle <- "(positive temperature difference indicates first-listed cluster is hotter)"
   
@@ -144,24 +145,26 @@ avgDiffPlot <- function(rlist1, rlist2, var, minTemp) {
   
   for (i in 1:length(rlist1)) {
     if (exists(paste0("ann",i))) {
-      pa <- pa + geom_label(data=get(paste0("ann",i)), aes(x=rt, y=value, label=lab, group=1), color="#30A2DA", size=3, alpha=0.35)
+      pa <- pa + geom_label(data=get(paste0("ann",i)), aes(x=rt, y=value, label=lab, group=1), color="#30A2DA", size=3, alpha=0.5)
     }
   }
   
   ### Average monthly temperature on school hour/days where outdoor temperature is above certain threshold
-  #Annotation 
+  # Begin annotation 
   maxDiffRowsHot <- do.call("rbind", by(aHot, aHot$month, function(x) x[which.max(abs(x$totavg)),]))
   rownames(maxDiffRowsHot) <- NULL 
-  maxDiffRowsHot$x <- as.POSIXct(format(strptime("01/01/16 9:00", format="%m/%d/%y %H:%M"), format="%H:%M"), format="%H:%M", tz="UTC")
-  #maxDiffRowsHot$y <- min(aHot$totavg) - 2
-  maxDiffRowsHot$y <- -7
-  maxDiffRowsHot$lab <- as.character(round(maxDiffRowsHot$totavg,2))
-  maxDiffRowsHot$monthdisp <- factor(maxDiffRowsHot$month, orderedMonths)
-  maxDiffRowsHot <- maxDiffRowsHot[c("monthdisp", "x", "y", "lab")]
   
   aHot <- melt(aHot, id.vars = c("rt", "month"))
   aHot$monthdisp <- factor(aHot$month, orderedMonths)
   aHot$rt <- as.POSIXct(aHot$rt, format="%H:%M", tz="UTC")
+  
+  # Continue annotation 
+  maxDiffRowsHot$x <- as.POSIXct(format(strptime("01/01/16 9:00", format="%m/%d/%y %H:%M"), format="%H:%M"), format="%H:%M", tz="UTC")
+  #maxDiffRowsHot$y <- min(aHot$value) + 2
+  maxDiffRowsHot$y <- -7
+  maxDiffRowsHot$lab <- as.character(round(maxDiffRowsHot$totavg,2))  
+  maxDiffRowsHot$monthdisp <- factor(maxDiffRowsHot$month, orderedMonths)
+  maxDiffRowsHot <- maxDiffRowsHot[c("monthdisp", "x", "y", "lab")]
   
   ph <- ggplot() +
     geom_hline(yintercept = 0, linetype="dotted", alpha=0.5, color='#FC4F30') + 
