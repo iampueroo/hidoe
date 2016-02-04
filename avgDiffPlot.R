@@ -74,8 +74,12 @@ avgDiffPlot <- function(rlist1, rlist2, var, minTemp) {
       if (i==1) {c <- merge(c, get(paste0("c",i))[c(1,2,3,4,17)], by=c("rdt", "rt", "month", "rd"), suffixes=c(i,i+1),  all.x=TRUE, all.y=TRUE)} 
       else {c <- merge(c, get(paste0("c",i))[c(1,2,3,4,17)], by=c("rdt", "rt", "month", "rd"), suffixes=c(i-1,i),  all.x=TRUE, all.y=TRUE)}}    
     if(length(rlist1) %% 2 !=0) {names(c)[names(c) == "TempDiff"] <- paste0("TempDiff", length(rlist1))} #make names consistent
-  } else {c <- c1}
-  c$AvgTempDiff <- rowMeans(c[,grepl("Diff", names(c))], na.rm=TRUE)
+    c$AvgTempDiff <- rowMeans(c[,grepl("Diff", names(c))], na.rm=TRUE)
+  } else {
+    c <- c1
+    c$AvgTempDiff <- c$TempDiff
+    names(c)[names(c) == "TempDiff"] <- "TempDiff1"
+  }
   cHot <- merge(c, oHot[,c("rdt", "rd", "rt")], by=c("rdt", "rt", "rd")) 
   
   a <- ddply(c, c("rt", "month"), summarise, totavg=mean(AvgTempDiff))
