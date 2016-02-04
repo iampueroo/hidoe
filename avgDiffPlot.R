@@ -113,14 +113,14 @@ avgDiffPlot <- function(rlist1, rlist2, var, minTemp) {
   # Find outlier comparisons for lablelling purposes 
   needsLabel <- list()
   for (i in 1:length(rlist1)) {
-    if (abs(aggregate(a["value"], list(variable=a$variable), mean, na.rm=TRUE)[i+1,2]) > abs(3*(aggregate(a["value"], list(variable=a$variable), mean, na.rm=TRUE))[1,2])) {
+    if (abs(aggregate(a["value"], list(variable=a$variable), mean, na.rm=TRUE)[i+1,2]) > abs(2*(aggregate(a["value"], list(variable=a$variable), mean, na.rm=TRUE))[1,2])) {
       needsLabel[i] <- 1
       
       # Dynamically input label position based on month and time (adjusted) of the absolute maximum value 
       tmp <- a[a$variable == paste0("avg",i),]
       max <- tmp[which.max(abs(tmp$value)),]
-      if (as.character(substr(max$rt,12,13) %in% c('08', '09'))) {max$rt <- max$rt+1.5*60*60
-      } else if (as.character(substr(max$rt,12,13) %in% c('13', '14'))) {max$rt <- max$rt-1.5*60*60}
+      if (as.character(substr(max$rt,12,13) %in% c('08', '09'))) {max$rt <- max$rt+1.8*60*60
+      } else if (as.character(substr(max$rt,12,13) %in% c('13', '14'))) {max$rt <- max$rt-1.8*60*60}
       assign(paste0("ann",i), data.frame(rt=max$rt,
                                          value=max$value,
                                          lab=paste(paste0(paste0(substr(rlist1[i],1,1),"-"), sub(".*- ", "", rlist1[i])),paste0(paste0(substr(rlist2[i],1,1),"-"),sub(".*- ", "", rlist2[i])), sep=" vs. "),
@@ -132,7 +132,7 @@ avgDiffPlot <- function(rlist1, rlist2, var, minTemp) {
   plot.subtitle <- "(positive temperature difference indicates first-listed cluster is hotter)"
   
   pa <- ggplot() +
-    geom_hline(yintercept = 0, linetype="dotted", alpha=0.5, color='#FC4F30') + 
+    geom_hline(yintercept = 0, linetype="dotted", color='#FC4F30') + 
     geom_line(data=a[a$variable!="totavg",], aes(x=rt, y=value, group = variable), color="#30A2DA", size=0.5, alpha=0.35) +
     geom_line(data=a[a$variable=="totavg",], aes(x=rt, y=value, group=1), color="dimgrey", size=1) +
     facet_wrap(~monthdisp, ncol=10, drop=FALSE) +
@@ -145,7 +145,7 @@ avgDiffPlot <- function(rlist1, rlist2, var, minTemp) {
   
   for (i in 1:length(rlist1)) {
     if (exists(paste0("ann",i))) {
-      pa <- pa + geom_label(data=get(paste0("ann",i)), aes(x=rt, y=value, label=lab, group=1), color="#30A2DA", size=3, alpha=0.5)
+      pa <- pa + geom_label(data=get(paste0("ann",i)), aes(x=rt, y=value, label=lab, group=1), color="#30A2DA", size=3)
     }
   }
   
@@ -167,7 +167,7 @@ avgDiffPlot <- function(rlist1, rlist2, var, minTemp) {
   maxDiffRowsHot <- maxDiffRowsHot[c("monthdisp", "x", "y", "lab")]
   
   ph <- ggplot() +
-    geom_hline(yintercept = 0, linetype="dotted", alpha=0.5, color='#FC4F30') + 
+    geom_hline(yintercept = 0, linetype="dotted", color='#FC4F30') + 
     geom_line(data=aHot[aHot$variable!="totavg",], aes(x=rt, y=value, group = variable), color="#30A2DA", size=0.5, alpha=0.35) +
     geom_line(data=aHot[aHot$variable=="totavg",], aes(x=rt, y=value, group=1), color="dimgrey", size=1) +
     facet_wrap(~monthdisp, ncol=10, drop=FALSE) +
