@@ -18,7 +18,7 @@ black     <- c(CO307, CO310, CO302, CO304)
 II101 <- c("Ilima - I101") #asphalt
 II104 <- c("Ilima - I104")
 ID101 <- c("Ilima - D101") #grass
-IC107 <- c("Ilima - IC07")
+IC107 <- c("Ilima - IC107")
 
 CO102 <- c("Campbell - O102") #concrete, asphalt
 CD109 <- c("Campbell - D109") #dirt
