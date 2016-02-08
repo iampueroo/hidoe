@@ -56,8 +56,15 @@ avgDiffPlot <- function(rlist1, rlist2, var, minTemp) {
   # Labels
   if (var=="Floor") {
     varCols <- c()
-    l1 <- "Ground"
-    l2 <- "Top"
+    if (substr(rlist1[1],1,1)=="C") {
+      if (substr(rlist1[1],13,13)=="1") {l1 <- "Ground"
+      } else if (substr(rlist1[1],13,13)=="2") {l1 <- "Middle"}
+      if (substr(rlist2[1],13,13)=="2") {l2 <- "Middle"
+      } else if (substr(rlist2[1],13,13)=="3") {l2 <- "Top"}
+    } else {
+      l1 <- "Ground"
+      l2 <- "Top"
+    } 
   } else {
     if (var=="Roof Color")         {varCols <- c(7,13)
     } else if (var=="Orientation") {varCols <- c(8,14)
@@ -117,7 +124,7 @@ avgDiffPlot <- function(rlist1, rlist2, var, minTemp) {
   # Find outlier comparisons for lablelling purposes 
   needsLabel <- list()
   for (i in 1:length(rlist1)) {
-    if (abs(aggregate(a["value"], list(variable=a$variable), mean, na.rm=TRUE)[i+1,2]) > abs(2*(aggregate(a["value"], list(variable=a$variable), mean, na.rm=TRUE))[1,2])) {
+    if (abs(aggregate(a["value"], list(variable=a$variable), mean, na.rm=TRUE)[i+1,2]) > abs(3*(aggregate(a["value"], list(variable=a$variable), mean, na.rm=TRUE))[1,2])) {
       needsLabel[i] <- 1
       
       # Dynamically input label position based on month and time (adjusted) of the absolute maximum value 
