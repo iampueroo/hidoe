@@ -18,7 +18,7 @@ black     <- c(CO307, CO310, CO302, CO304)
 II101 <- c("Ilima - I101") #asphalt
 II104 <- c("Ilima - I104")
 ID101 <- c("Ilima - D101") #grass
-IC107 <- c("Ilima - IC07")
+IC107 <- c("Ilima - C107")
 
 CO102 <- c("Campbell - O102") #concrete, asphalt
 CD109 <- c("Campbell - D109") #dirt
@@ -40,18 +40,18 @@ IC106 <- c("Ilima - C106") #ground
 IC107 <- c("Ilima - C107")
 ID101 <- c("Ilima - D101")
 ID102 <- c("Ilima - D102")
-KE103 <- c("Kaimilloa - E103")
-KE106 <- c("Kaimilloa - E106")
-KF105 <- c("Kaimilloa - F105")
-KF106 <- c("Kaimilloa - F106")
+KE103 <- c("Kaimiloa - E103")
+KE106 <- c("Kaimiloa - E106")
+KF105 <- c("Kaimiloa - F105")
+KF106 <- c("Kaimiloa - F106")
 IC206 <- c("Ilima - C206") #top
 IC207 <- c("Ilima - C207")
 ID201 <- c("Ilima - D201")
 ID202 <- c("Ilima - D202")
-KE203 <- c("Kaimilloa - E203")
-KE206 <- c("Kaimilloa - E206")
-KF205 <- c("Kaimilloa - F213")
-KF206 <- c("Kaimilloa - F214")
+KE203 <- c("Kaimiloa - E203")
+KE206 <- c("Kaimiloa - E206")
+KF213 <- c("Kaimiloa - F213")
+KF214 <- c("Kaimiloa - F214")
 
 CD102 <- c("Campbell - D102") #ground
 CD105 <- c("Campbell - D105")
@@ -75,8 +75,8 @@ CO310 <- c("Campbell - O310")
 CO302 <- c("Campbell - O302")
 CO304 <- c("Campbell - O304")
 
-ground1 <- c(IC106, IC107, ID101, ID102, KE103, KE106, KF105, KF106)
-top1    <- c(IC206, IC207, ID201, ID202, KE203, KE206, KF205, KF206)
+ground1 <- c(IC106, IC107, ID101, KE103, KE106, KF105, KF106)
+top1    <- c(IC206, IC207, ID201, KE203, KE206, KF213, KF214)
 
 ground2 <- c(CD102, CD105, CD109, CD112, CO107, CO102, CO104)
 middle2 <- c(CD202, CD205, CD209, CD212, CO207, CO202, CO204)
@@ -130,8 +130,8 @@ one2  <- c(CD302, CD305, CO310, CO307)
 seven2 <- c(CO204, CO202, CD209, CD212)
 ten2   <- c(CO304, CO302, CD309, CD312)
 
-smdiffseven <- c(zero1, one1, cj109)
-lgdiffseven <- c(seven1, ten1, cj105)
+smdiffseven <- c(zero1, one1, CJ109)
+lgdiffseven <- c(seven1, ten1, CJ105)
 
 smdiffone <- c(zero2, seven2)
 lgdiffone <- c(one2, ten2)
@@ -153,7 +153,7 @@ CD305 <- c("Campbell - D305")
 CD312 <- c("Campbell - D312")
 CO104 <- c("Campbell - O104")
 CO204 <- c("Campbell - O204")
-CO207 <- c("Campbell - O107")
+CO207 <- c("Campbell - O207")
 CO304 <- c("Campbell - O304")
 CO310 <- c("Campbell - O310")
 CD102 <- c("Campbell - D102") #SE,NW
