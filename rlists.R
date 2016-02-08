@@ -83,14 +83,14 @@ middle2 <- c(CD202, CD205, CD209, CD212, CO207, CO202, CO204)
 top2    <- c(CD302, CD305, CD309, CD312, CO310, CO302, CO304)
 
 ### Overhang ###
-CD105 <- c("Cambell - D105") #no overhang
-CD205 <- c("Cambell - D205")
-CO105 <- c("Cambell - O105")
-CO205 <- c("Cambell - O205")
-CD112 <- c("Cambell - D112") #7'-9'
-CD212 <- c("Cambell - D212")
-CO102 <- c("Cambell - O102")
-CO202 <- c("Cambell - O202")
+CD105 <- c("Campbell - D105") #no overhang
+CD205 <- c("Campbell - D205")
+CO105 <- c("Campbell - O105")
+CO205 <- c("Campbell - O205")
+CD112 <- c("Campbell - D112") #7'-9'
+CD212 <- c("Campbell - D212")
+CO102 <- c("Campbell - O102")
+CO202 <- c("Campbell - O202")
 
 CD305 <- c("Campbell - D305") #1'-3'
 CO307 <- c("Campbell - O307") 
