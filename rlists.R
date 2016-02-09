@@ -118,8 +118,8 @@ CO302 <- c("Campbell - O302")
 CD309 <- c("Campbell - D309")
 CD312 <- c("Campbell - D312")
 
-zero1  <- c(CD105, CD205, CO105, CO205)
-seven1 <- c(CD112, CD212, CO102, CO202)
+zero1  <- c(CD105, CD205, CO205)
+seven1 <- c(CD112, CD212, CO202)
             
 one1 <- c(CD305, CO307)
 ten1 <- c(CD312, CO302) 
@@ -171,5 +171,5 @@ CO307 <- c("Campbell - O307")
 KP02 <- c("Kaimiloa - P02") #NE,SE,SW
 KP10 <- c("Kaimiloa - P10") #NE,SE,SW,NW
 
-nesw <- c(CD105, CD112, CD205, CD212, CD305, CD312, CO104, CO204, CO207, CO304, CO310)
-senw <- c(CD102, CD109, CD202, CD209, CD302, CD309, CO102, CO202, CO205, CO302, CO307)
+nesw <- c(CD105, CD112, CD205, CD212, CD305, CD312, CO204, CO207, CO304, CO310)
+senw <- c(CD102, CD109, CD202, CD209, CD302, CD309, CO202, CO205, CO302, CO307)
