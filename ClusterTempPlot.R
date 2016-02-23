@@ -32,10 +32,11 @@ ClusterTempPlot <- function(rlist1, rlist2, var, minTemp) {
   crt$Date <- as.Date(crt$StartTime, format="%m/%d/%y")
   crt$Time <- format(strptime(crt$StartTime, format="%m/%d/%y %H:%M"), format="%H:%M")
   crt$Month <- format(crt$Date, "%B") 
-  crt <- join(crt, sdates, by="Date", type="right", match="all") #restrict to school days
-  crt <- join(crt, shours, by="Time", type="right", match="all") #restrict to school hours
+ ### crt <- join(crt, sdates, by="Date", type="right", match="all") #restrict to school days
+ ###crt <- join(crt, shours, by="Time", type="right", match="all") #restrict to school hours
   crt$SensorAlias <- as.character(crt$SensorAlias)
-  crt$StartTime <<- NULL
+  crt$StartTime <- NULL
+  crt <<- crt
   
   keepVars <- c("Temp", "Alias", "RoofColor", "Floor", "Orientation", "Landscape", "Overhang", "Date", "Time", "Month")
   g1 <- crt[(crt$Alias %in% rlist1) & (!is.na(crt$Temp) & substr(crt$Alias,nchar(crt$SensorAlias)-1,nchar(crt$SensorAlias))!="HD"), keepVars] #group 1
@@ -84,13 +85,13 @@ ClusterTempPlot <- function(rlist1, rlist2, var, minTemp) {
   }
   cHot <- merge(c, otHot[,c("Time", "Month", "Date")], by=c("Time", "Month", "Date")) 
   
-  a <- ddply(c, c("Time", "Month"), summarize, totavg=mean(AvgTempDiff), na.rm=TRUE) #aggregated by time
-  aHot <- ddply(cHot, c("Time", "Month"), summarize, totavg=mean(AvgTempDiff), na.rm=TRUE) #aggregated by time
+  a <- ddply(c, c("Time", "Month"), summarize, totavg=mean(AvgTempDiff, na.rm=TRUE)) #aggregated by time
+  aHot <- ddply(cHot, c("Time", "Month"), summarize, totavg=mean(AvgTempDiff, na.rm=TRUE)) #aggregated by time
   
   for (i in 1:length(rlist1)) {
     colName <- paste0("TempDiff",i)
-    assign(paste0("a",i), do.call("ddply",list(c, c("Time", "Month"), summarize, avg = call("mean",as.symbol(colName)))))
-    assign(paste0("aHot",i), do.call("ddply",list(cHot, c("Time", "Month"), summarize, avg = call("mean",as.symbol(colName)))))
+    assign(paste0("a",i), do.call("ddply",list(c, c("Time", "Month"), summarize, avg = call("mean",as.symbol(colName), na.rm=TRUE))))
+    assign(paste0("aHot",i), do.call("ddply",list(cHot, c("Time", "Month"), summarize, avg = call("mean",as.symbol(colName), na.rm=TRUE))))
     
     a <- merge(a, get(paste0("a",i)), by=c("Time", "Month"), suffixes=c(i-1,i))
     aHot <- merge(aHot, get(paste0("aHot",i)), by=c("Time", "Month"), suffixes=c(i-1,i))
@@ -102,11 +103,11 @@ ClusterTempPlot <- function(rlist1, rlist2, var, minTemp) {
   
   # Begin annotation 
   maxDiffRows <- do.call("rbind", by(a, a$Month, function(x) x[which.max(abs(x$totavg)),])) #get max of average difference by month
-  rownames(maxDiffRows) <- NULL 
   
   a <- melt(a, id.vars = c("Time", "Month"))
   a$monthdisp <- factor(a$Month, orderedMonths)
   a$Time <- as.POSIXct(a$Time, format="%H:%M", tz="UTC")
+  a <- na.omit(a)
   
   # Continue annotation
   maxDiffRows$x <- as.POSIXct(format(strptime("01/01/16 9:00", format="%m/%d/%y %H:%M"), format="%H:%M"), format="%H:%M", tz="UTC")
@@ -116,33 +117,32 @@ ClusterTempPlot <- function(rlist1, rlist2, var, minTemp) {
   maxDiffRows <- maxDiffRows[c("monthdisp", "x", "y", "lab")]
   
   plot.title <- paste(var, paste(l1, l2, sep=" vs. "), sep=": ")
-  plot.subtitle <- "(Positive temperature difference indicates first listed cluster is hotter.)"
+  plot.subtitle <- "Positive temperature difference indicates first listed cluster is hotter."
   
   pa <- ggplot() +
     geom_hline(yintercept = 0, linetype="dotted", color='#FC4F30') + 
     geom_line(data=a[a$variable!="totavg",], aes(x=Time, y=value, group = variable), color="#30A2DA", size=0.5, alpha=0.35) +
     geom_line(data=a[a$variable=="totavg",], aes(x=Time, y=value, group=1), color="dimgrey", size=1) +
     facet_wrap(~monthdisp, ncol=10, drop=FALSE) +
-    scale_y_continuous(breaks=seq(-8,8,2)) +
     scale_x_datetime(breaks=date_breaks("2 hour"), labels=date_format("%H:%M")) +
     labs(x="", y="") +
     ggtitle(bquote(atop(.(plot.title), atop(.(plot.subtitle), "")))) +
-    theme_bw() +
+    theme_fivethirtyeight() +
     theme(legend.position="none") +
-    geom_text(data=maxDiffRows, aes(x, y, label=paste("Max Avg Difference:", lab, "F", sep=" "), group=1), color="dimgrey", size=3, hjust=0)
+    geom_text(data=maxDiffRows, aes(x, y, label=paste("Maximum  Difference:", lab, "F", sep=" "), group=1), color="dimgrey", size=3, hjust=0)
   
   
   ### Average monthly temperature on school hour/days where outdoor temperature is above certain threshold
   # Begin annotation 
   maxDiffRowsHot <- do.call("rbind", by(aHot, aHot$Month, function(x) x[which.max(abs(x$totavg)),]))
-  rownames(maxDiffRowsHot) <- NULL 
   
   aHot <- melt(aHot, id.vars = c("Time", "Month"))
   aHot$monthdisp <- factor(aHot$Month, orderedMonths)
   aHot$Time <- as.POSIXct(aHot$Time, format="%H:%M", tz="UTC")
+  aHot <- na.omit(aHot)
   
   # Continue annotation 
-  maxDiffRowsHot$x <- as.POSIXct(format(strptime("01/01/16 11:00", format="%m/%d/%y %H:%M"), format="%H:%M"), format="%H:%M", tz="UTC")
+  maxDiffRowsHot$x <- as.POSIXct(format(strptime("01/01/16 9:00", format="%m/%d/%y %H:%M"), format="%H:%M"), format="%H:%M", tz="UTC")
   maxDiffRowsHot$y <- -7
   maxDiffRowsHot$lab <- as.character(round(maxDiffRowsHot$totavg,2))  
   maxDiffRowsHot$monthdisp <- factor(maxDiffRowsHot$Month, orderedMonths)
@@ -155,34 +155,43 @@ ClusterTempPlot <- function(rlist1, rlist2, var, minTemp) {
     facet_wrap(~monthdisp, ncol=10, drop=FALSE) +
     scale_x_datetime(breaks=date_breaks("2 hour"), labels=date_format("%H:%M")) +
     labs(x="Time", y="") +
-    theme_bw() +
+    theme_fivethirtyeight() +
     theme(legend.position="none") +
     geom_text(data=maxDiffRowsHot, aes(x, y, label=paste("Max Avg Difference:", lab, "F", sep=" "), group=1), color="dimgrey", size=3, hjust=0)
   
   ### Plot on grid:w
   
-  grid.arrange(pa,ph, layout_matrix=rbind(c(1), c(2)), 
-               left=textGrob(expression(paste("Temperature Difference (", degree ~ F, ")")), rot=90, vjust=1, gp=gpar(fontsize=12)))
   
   ex <- do.call(rbind, lapply(paste0("c",1:length(rlist1)), get))
   exRows <- do.call("rbind", by(ex, ex$Month, function(x) x[which.max(abs(x$TempDiff)),]))
   
+  exagg <- data.frame(Time=character(),  Month=character(), Date=as.Date(character()), Temp1=numeric(), Temp2=numeric()) #initialization
   for (i in 1:length(orderedMonths)) {
-    print(orderedMonths[i])
-    row <- exRows[exRows$Month==orderedMonths[i]]
+    row <- exRows[exRows$Month==orderedMonths[i],]
     for (i in 1:length(rlist1)) {
       if (row$Alias1==rlist1[i]) {
         # track what i is - use it to get data
-        # add pulled data from ci to an empty dataframe which will eventually look like a/aHot - before it has been melted
-        #keep merging those data frames - want data for every month
-        #keep track of where data is coming from (c1, c2, etc) so you can put a title on every one (or footer?)
-        #instead of plotting differences, plot actual temperature with outside temperature
-        
-        #each plot should be separate??? then you can arrange them using grid arrange
+        e <- get(paste0("c",i))
+        exagg <- rbind(exagg, e[(e$Month==row$Month & e$Date==row$Date),])
       }
     }
   }
+  exagg <- merge(exagg[,c("Month", "Date", "Time", "Temp1", "Temp2", "Alias1", "Alias2")], ot, by=c("Month", "Date", "Time"), all.x=TRUE)
   
+  exagg.melt <- melt(exagg[,c("Month", "Date", "Time", "Temp1", "Temp2", "OutdoorTemp"),], id.vars=c("Month", "Date", "Time"))
+  exagg.melt$monthdisp <- factor(exagg.melt$Month, orderedMonths)
+  exagg.melt$Time <- as.POSIXct(exagg.melt$Time, format="%H:%M", tz="UTC")
   
-   
+  pe <- ggplot() +
+    geom_line(data=exagg.melt[exagg.melt$variable=="OutdoorTemp",], aes(x=Time, y=value), color="gray", size=0.8) +
+    geom_line(data=exagg.melt[exagg.melt$variable!="OutdoorTemp",], aes(x=Time, y=value, color=variable), size=0.8) +
+    ylim(70,95) +
+    facet_wrap(~monthdisp, ncol=10) +
+    scale_x_datetime(breaks=date_breaks("2 hour"), labels=date_format("%H:%M")) +
+    scale_colour_manual(values=colors) +
+    theme_fivethirtyeight() +
+    theme(legend.position="none")
+  
+  grid.arrange(pa,ph,pe, layout_matrix=rbind(c(1), c(2), c(3)))
+  
 }
