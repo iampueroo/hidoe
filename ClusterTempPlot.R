@@ -212,7 +212,7 @@ ClusterTempPlot <- function(rlist1, rlist2, var, minTemp) {
   exRowsLab <- data.frame(Time=as.POSIXct(format(strptime("01/01/16 11:00", format="%m/%d/%y %H:%M"), format="%H:%M"), format="%H:%M", tz="UTC"),
                           lab=as.character(paste(exRows$Date, exRows$Time, sep=" ")),
                           lab2=as.character(round(exRows$TempDiff,2)),
-                          monthdisp=orderedMonths,
+                          monthdisp <- factor(exRows$Month, orderedMonths),
                           value=68,
                           value2=66.8)
 
