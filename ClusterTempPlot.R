@@ -172,6 +172,13 @@ ClusterTempPlot <- function(rlist1, rlist2, var, minTemp) {
     row <- exRows[exRows$Month==orderedMonths[i]]
     for (i in 1:length(rlist1)) {
       if (row$Alias1==rlist1[i]) {
+        # track what i is - use it to get data
+        # add pulled data from ci to an empty dataframe which will eventually look like a/aHot - before it has been melted
+        #keep merging those data frames - want data for every month
+        #keep track of where data is coming from (c1, c2, etc) so you can put a title on every one (or footer?)
+        #instead of plotting differences, plot actual temperature with outside temperature
+        
+        #each plot should be separate??? then you can arrange them using grid arrange
       }
     }
   }
