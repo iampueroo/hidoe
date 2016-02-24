@@ -105,6 +105,9 @@ AverageTempPlot <- function(rlist, var, minTemp) {
     geom_text(data=ann1, aes(x=rt, y=value, label=lab, group=1), color="#CC6666", size=4, hjust=0) + 
     geom_text(data=ann2, aes(x=rt, y=value, label=lab, group=1), color="#9999CC", size=4, hjust=0) +
     theme_fivethirtyeight() + theme(legend.position="none") 
+  
+  if (length(rlist)==3) {pa <- pa + geom_text(data=ann3, aes(x=rt, y=value, label=lab, group=1), color="#66CC99", size=4, hjust=0)}
+
 
     
   
