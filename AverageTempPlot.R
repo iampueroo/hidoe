@@ -87,16 +87,17 @@ AverageTempPlot <- function(rlist, var, minTemp) {
   
   if (length(rlist)==3) {
     plot.title <- paste(r1.name,r2.name,r3.name, sep=" vs. ")
-    plot.subtitle <- paste(rlab1[,varCols], rlab2[,varCols], rlab3[,varCols], sep=" vs. ") 
+    plot.subtitle <- paste0(var, ": ", paste(rlab1[,varCols], rlab2[,varCols], rlab3[,varCols], sep=" vs. "))
   } else {
     plot.title <- paste(r1.name,r2.name, sep=" vs. ")
-    plot.subtitle <- paste(rlab1[,varCols], rlab2[,varCols], sep=" vs. ") 
+    plot.subtitle <- paste0(var, ": ",paste(rlab1[,varCols], rlab2[,varCols], sep=" vs. ")) 
   }
   
   
   pa <- ggplot() +
     geom_line(data=rooms[rooms$variable=="outavg",], aes(x=Time, y=value), color="gray") +
     geom_line(data=rooms[rooms$variable!="outavg",], aes(x=Time, y=value, color=variable), size=0.8) +
+    geom_hline(yintercept=85, linetype="dotted", color="black") +
     facet_wrap(~monthdisp, ncol=10) +
     scale_y_continuous(breaks=seq(60,110,5)) +
     scale_colour_manual(values=colors) +
@@ -108,9 +109,6 @@ AverageTempPlot <- function(rlist, var, minTemp) {
   
   if (length(rlist)==3) {pa <- pa + geom_text(data=ann3, aes(x=rt, y=value, label=lab, group=1), color="#66CC99", size=4, hjust=0)}
 
-
-    
-  
   ### Average monthly temperature on school hour/days where outdoor temperature is above certain threshold
   oHot <- data.frame(ddply(otHot, c("Time", "Month"), summarise, outavg=mean(OutdoorTemp)))
   roomsHot <- merge(roomsHot, oHot, by=c("Time", "Month"))
@@ -123,6 +121,7 @@ AverageTempPlot <- function(rlist, var, minTemp) {
   ph <- ggplot() +
     geom_line(data=roomsHot[roomsHot$variable=="outavg",], aes(x=Time, y=value), color="gray") +
     geom_line(data=roomsHot[roomsHot$variable!="outavg",], aes(x=Time, y=value, color=variable), size=0.8) +
+    geom_hline(yintercept=85, linetype="dotted", color="black") +
     facet_wrap(~monthdisp, ncol=10) +
     scale_y_continuous(breaks=seq(60,110,5), limits=c(70,95)) +
     scale_colour_manual(values=colors) +
@@ -159,6 +158,7 @@ AverageTempPlot <- function(rlist, var, minTemp) {
   pd <- ggplot() +
     geom_line(data=roomsDiff[roomsDiff$variable=="OutdoorTemp",], aes(x=Time, y=value), color="gray") +
     geom_line(data=roomsDiff[roomsDiff$variable!="OutdoorTemp",], aes(x=Time, y=value, color=variable), size=0.8) +
+    geom_hline(yintercept=85, linetype="dotted", color="black") +
     facet_wrap(~monthdisp, ncol=10, drop=FALSE) +
     scale_y_continuous(breaks=seq(60,110,5)) +
     scale_colour_manual(values=colors) +
