@@ -53,7 +53,7 @@ AverageTempPlot <- function(rlist, var, minTemp) {
     assign(paste0("room",i), crt[(crt$Alias==rlist[i]) & ((substr(crt$SensorAlias,nchar(crt$SensorAlias)-1,nchar(crt$SensorAlias))!="HD")),]) 
     assign(paste0("roomHot",i), merge(get(paste0("room",i)), otHot[,c("Date", "Time", "Month")], by=c("Date", "Time", "Month"), all.x=FALSE)) #observations above minTemp
     assign(paste0("r",i), get(paste0("room",i)))
-    assign(paste0("rlab",i), get(paste0("r",i))[1, c("Alias", "RoofColor", "Orientation", "Landscape", "Overhang")])
+    assign(paste0("rlab",i), get(paste0("r",i))[1, c("Alias", "RoofColor", "Orientation", "Landscape", "Overhang", "Floor")])
     
     assign(paste0("room",i), ddply(get(paste0("room",i)), c("Time", "Month"), summarize, avg=mean(Temp)))
     assign(paste0("roomHot",i), ddply(get(paste0("roomHot",i)), c("Time", "Month"), summarize, avg=mean(Temp)))
