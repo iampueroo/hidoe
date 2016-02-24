@@ -137,10 +137,17 @@ OverviewPlot <- function() {
     theme_fivethirtyeight() + guides(color=guide_legend(ncol=13))
   
   
-
-
+  ot$Year <- as.factor(year(ot$Date))
+  ot$Day <- as.character(format(ot$Date, "%m-%d"))
+  otoverlap <- ot[ot$Month %in% c("August", "September", "October"),]
+  ggplot(otoverlap, aes(x=Date, y=OutdoorTemp)) + geom_point(color="blue", alpha=0.5) + geom_smooth(size=1, color="red") + facet_grid(~Year) +
+     theme_fivethirtyeight()
   
-   
+  year(otoverlap$Date) <- 2013
+  
+  ggplot() + geom_smooth(data=otoverlap, aes(x=Day, y=OutdoorTemp, color=Year, group=Year)) + scale_y_continuous(breaks=seq(70,100,5), limits=c(70,100)) +
+    ggtitle("Comparison of Summer Months by Year") + theme_fivethirtyeight()
+  
 
   
 }
