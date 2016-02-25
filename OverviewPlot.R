@@ -24,6 +24,9 @@
   crt <- do.call(rbind,lapply(dir(), read.csv))
   names(crt) <- c("RoomID", "SensorAlias", "StartTime", "Temp", "RH", "Ill")
   crt <- merge(crt[,c(1,2,3,4)], arch[,c("RoomID", "Alias", "Floor", "RoofColor", "SQFT", "Orientation", "Landscape", "Overhang", "School", "AC")], by="RoomID", all.x=TRUE)
+  crt$SensorAlias <- as.character(crt$SensorAlias)
+  crt <- crt[(substr(crt$SensorAlias,nchar(crt$SensorAlias)-1,nchar(crt$SensorAlias))!="HD"),]
+  
   
   crt$Date <- as.Date(crt$StartTime, format="%m/%d/%y")
   crt$Time <- format(strptime(crt$StartTime, format="%m/%d/%y %H:%M"), format="%H:%M")
@@ -69,15 +72,12 @@
   
   o.daily <- ddply(cro, "Season", summarize, OutGE85Count=sum(OutGE85, na.rm=TRUE), Count=sum(OutTimeUnit, na.rm=TRUE))
   o.daily$OutGE85 <- with(o.daily, round(OutGE85Count/Count,2))
-  o.daily$monthdisp <- factor(o.daily$Month, orderedMonths)  
   
   cro.daily <- ddply(cro, c("Alias", "Season", "School"), summarize, InGE85Count=sum(InGE85), Count=sum(TimeUnit))
   cro.daily$InGE85 <- with(cro.daily, round(InGE85Count/Count,2))
-  cro.daily$monthdisp <- factor(cro.daily$Month, orderedMonths)
   
   cros.daily <- ddply(cro, c("Season", "School"), summarize, InGE85Count=sum(InGE85), Count=sum(TimeUnit))
   cros.daily$InGE85 <- with(cros.daily, round(InGE85Count/Count,2))
-  cros.daily$monthdisp <- factor(cros.daily$Month, orderedMonths)
   
   anno <- o.daily
   anno$x <- 53
@@ -171,6 +171,8 @@
     theme(axis.text.x = element_blank(), legend.position="none")
   
   
+  
+  
   cr <- ddply(crt, c("Time", "Alias", "Season", "School"), summarize, AvgTemp=mean(Temp))
   ot$Season <- as.factor(ifelse(month(ot$Date) %in% c(1,2,3,4,11,12),"Winter","Summer")) 
   o <- ddply(ot, c("Time", "Season"), summarize, AvgTemp=mean(OutdoorTemp))
@@ -185,7 +187,7 @@
     facet_grid(School~Season) +
     scale_y_continuous(breaks=seq(75,100,5)) +
     scale_x_datetime(breaks=date_breaks("1 hour"), labels=date_format("%H:%M")) +
-    ggtitle("Average School Day Temperatures") +
+    ggtitle("Average School Day Temperature") +
     theme_fivethirtyeight() + guides(color=guide_legend(ncol=13))
   
   cr <- ddply(crt, c("Time", "Alias", "Month", "School"), summarize, AvgTemp=mean(Temp))
@@ -203,7 +205,7 @@
     facet_grid(School~monthdisp) +
     scale_y_continuous(breaks=seq(75,100,5)) +
     scale_x_datetime(breaks=date_breaks("1 hour"), labels=date_format("%H:%M")) +
-    ggtitle("Average School Day Temperatures") +
+    ggtitle("Average School Day Temperature") +
     theme_fivethirtyeight() + guides(color=guide_legend(ncol=13))
   
   ot$Year <- as.factor(year(ot$Date))
