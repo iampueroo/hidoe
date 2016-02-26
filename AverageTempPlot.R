@@ -24,16 +24,19 @@ AverageTempPlot <- function(rlist, var, minTemp) {
   #setwd("~/dropbox/rh1/hidoe/csv")
   #crt <- do.call(rbind,lapply(dir(), read.csv))
   #names(crt) <- c("RoomID", "SensorAlias", "StartTime", "Temp", "RH", "Ill")
-  #crt <- merge(crt[,c(1,2,3,4)], arch[,c("RoomID", "Alias", "Floor", "RoofColor", "SQFT", "Orientation", "Landscape", "Overhang")], by="RoomID", all.x=TRUE)
-  
+  #crt <- merge(crt[,c(1,2,3,4)], arch[,c("RoomID", "Alias", "Floor", "RoofColor", "SQFT", "Orientation", "Landscape", "Overhang", "School", "AC")], by="RoomID", all.x=TRUE)
+  crt$SensorAlias <- as.character(crt$SensorAlias)
+  crt <- crt[(substr(crt$SensorAlias,nchar(crt$SensorAlias)-1,nchar(crt$SensorAlias))!="HD"),]
   #crt$Date <- as.Date(crt$StartTime, format="%m/%d/%y")
   #crt$Time <- format(strptime(crt$StartTime, format="%m/%d/%y %H:%M"), format="%H:%M")
   #crt$Month <- format(crt$Date, "%B") 
   #crt <- merge(crt, sdates, by="Date", all.x=FALSE) #restrict to school days
   #crt <- merge(crt, shours, by="Time", all.x=FALSE) #restrict to school hours
-  #crt$SensorAlias <- as.character(crt$SensorAlias)
   #crt$StartTime <- NULL
-  #crt <<- crt[!is.na(crt$Temp),]
+  #crt <- crt[!is.na(crt$Temp),]
+  crt <- crt[crt$AC!=1,] #remove classrooms with AC
+  crt$AC <- NULL
+  crt <<- crt
   
   ot <- read.csv(file="~/dropbox/rh1/hidoe/outdoortemp.csv", sep=",") #outdoor temperature - already restricted to school day/hours
   names(ot) <- c("DateTime", "OutdoorTemp")
@@ -50,7 +53,7 @@ AverageTempPlot <- function(rlist, var, minTemp) {
     print(rlist[i])
     assign(paste0("r",i,".name"), rlist[i])
     
-    assign(paste0("room",i), crt[(crt$Alias==rlist[i]) & ((substr(crt$SensorAlias,nchar(crt$SensorAlias)-1,nchar(crt$SensorAlias))!="HD")),]) 
+    assign(paste0("room",i), crt[crt$Alias==rlist[i],]) 
     assign(paste0("roomHot",i), merge(get(paste0("room",i)), otHot[,c("Date", "Time", "Month")], by=c("Date", "Time", "Month"), all.x=FALSE)) #observations above minTemp
     assign(paste0("r",i), get(paste0("room",i)))
     assign(paste0("rlab",i), get(paste0("r",i))[1, c("Alias", "RoofColor", "Orientation", "Landscape", "Overhang", "Floor")])
