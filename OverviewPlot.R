@@ -46,150 +46,399 @@
   ot$Time <- format(strptime(ot$DateTime, format="%m/%d/%y %H:%M"), format="%H:%M")
   ot$DateTime <- NULL
   ot$Month <- format(ot$Date, "%B")
-
   
+  ot2013 <- ot[year(ot$Date)==2013,]
+  ot2014 <- ot[year(ot$Date)==2014,]
+  hotMonths13 <- do.call("rbind", by(ot2013, ot2013$Month, function(x) x[which.max(x$OutdoorTemp),]))
+  hotMonths14 <- do.call("rbind", by(ot2014, ot2014$Month, function(x) x[which.max(x$OutdoorTemp),]))
+  hotMonths <- do.call("rbind", by(ot, ot$Month, function(x) x[which.max(x$OutdoorTemp),]))
+  hotMonths <- hotMonths[,c("Date", "Month")]
+  
+  #Plots
   ot.daily <- ddply(ot,c("Date"), summarise, AvgOutdoorTemp=mean(OutdoorTemp)) #aggregated by date 
   crt.daily <- ddply(crt, c("Date", "Alias", "School"), summarise, AvgRoomTemp=mean(Temp, na.rm=TRUE), MaxRoomTemp=max(Temp,na.rm=TRUE)) #aggregated  by date
   cro <- data.frame(merge(crt.daily, ot.daily, by=c("Date"), all.x=TRUE, all.y=TRUE))  #merge to create giant dataset
   
   cro.melt <- melt(cro, id.vars=c("Date", "Alias", "School"))
-  ggplot(cro.melt, aes(x=Date, y=value, colour=variable)) + geom_point(data=cro.melt[cro.melt$variable!="AvgOutdoorTemp",], alpha=0.15) + geom_smooth(size=1) +
+  
+  ann.o <- data.frame(x=as.Date("2013-08-01", format="%Y-%m-%d"),
+                      y=74,
+                      lab="Average Outdoor Temperature",
+                      monthdisp=factor("August", levels=orderedMonths))
+  
+  ann.a <- data.frame(x=as.Date("2013-08-01", format="%Y-%m-%d"),
+                      y=73.5,
+                      lab="Average Classroom Temperature",
+                      monthdisp=factor("August", levels=orderedMonths)) 
+  
+  ann.m <- data.frame(x=as.Date("2013-08-01", format="%Y-%m-%d"),
+                      y=73,
+                      lab="Maximum Classroom Temperature",
+                      monthdisp=factor("August", levels=orderedMonths))
+  
+  ggplot(cro.melt[cro.melt$School=="Kaimiloa",], aes(x=Date, y=value, colour=variable)) + geom_point(data=cro.melt[cro.melt$School=="Kaimiloa" & cro.melt$variable!="AvgOutdoorTemp",], alpha=0.25) + geom_smooth(size=1) +
     geom_hline(yintercept=85, linetype="dashed", color="dimgrey", size=0.8) + 
-    facet_grid(~School) +
-    scale_y_continuous(breaks=seq(70,110,5)) + 
+    scale_y_continuous(breaks=seq(70,110,5), limits = c(70,110)) + 
     scale_colour_manual(values=colors) +
     scale_x_date(date_breaks="1 month", date_labels="%b '%y") + 
-    ggtitle("Daily Temperature") + 
+    ggtitle("Average Daily Temperature: Kaimiloa Elementary School") + 
     xlab("Date") + ylab(expression(paste("Temperature (", degree ~ F, ")"))) +
-    theme_fivethirtyeight()
+    geom_text(data=ann.o, aes(x=x, y=y, label=lab, group=1), color="#8B8B8B", size=4, hjust=0) + 
+    geom_text(data=ann.a, aes(x=x, y=y, label=lab, group=1), color="#30A2DA", size=4, hjust=0) + 
+    geom_text(data=ann.m, aes(x=x, y=y, label=lab, group=1), color="#FC4F30", size=4, hjust=0) + 
+    theme_fivethirtyeight() +theme(legend.position="none") 
+  ggplot(cro.melt[cro.melt$School=="Campbell",], aes(x=Date, y=value, colour=variable)) + geom_point(data=cro.melt[cro.melt$School=="Campbell" & cro.melt$variable!="AvgOutdoorTemp",], alpha=0.25) + geom_smooth(size=1) +
+    geom_hline(yintercept=85, linetype="dashed", color="dimgrey", size=0.8) + 
+    scale_y_continuous(breaks=seq(70,110,5), limits = c(70,110)) + 
+    scale_colour_manual(values=colors) +
+    scale_x_date(date_breaks="1 month", date_labels="%b '%y") + 
+    ggtitle("Average Daily Temperature: James Campbell High School") + 
+    xlab("Date") + ylab(expression(paste("Temperature (", degree ~ F, ")"))) +
+     geom_text(data=ann.o, aes(x=x, y=y, label=lab, group=1), color="#8B8B8B", size=4, hjust=0) + 
+     geom_text(data=ann.a, aes(x=x, y=y, label=lab, group=1), color="#30A2DA", size=4, hjust=0) + 
+     geom_text(data=ann.m, aes(x=x, y=y, label=lab, group=1), color="#FC4F30", size=4, hjust=0) + 
+    theme_fivethirtyeight()+theme(legend.position="none") 
+  ggplot(cro.melt[cro.melt$School=="Ilima",], aes(x=Date, y=value, colour=variable)) + geom_point(data=cro.melt[cro.melt$School=="Ilima" & cro.melt$variable!="AvgOutdoorTemp",], alpha=0.25) + geom_smooth(size=1) +
+    geom_hline(yintercept=85, linetype="dashed", color="dimgrey", size=0.8) + 
+    scale_y_continuous(breaks=seq(70,110,5), limits = c(70,110)) + 
+    scale_colour_manual(values=colors) +
+    scale_x_date(date_breaks="1 month", date_labels="%b '%y") + 
+    ggtitle("Average Daily Temperature: Ilima Intermediate School") + 
+    xlab("Date") + ylab(expression(paste("Temperature (", degree ~ F, ")"))) +
+    geom_text(data=ann.o, aes(x=x, y=y, label=lab, group=1), color="#8B8B8B", size=4, hjust=0) + 
+    geom_text(data=ann.a, aes(x=x, y=y, label=lab, group=1), color="#30A2DA", size=4, hjust=0) + 
+    geom_text(data=ann.m, aes(x=x, y=y, label=lab, group=1), color="#FC4F30", size=4, hjust=0) + 
+    theme_fivethirtyeight()+theme(legend.position="none") 
   
-   
+  
+  
+  #Bar plot
   cro <- merge(crt, ot, by=c("Time", "Month", "Date"), all.x=TRUE, all.y=TRUE)
-  cro$TimeUnit <- 1
-  cro$OutTimeUnit <- ifelse(is.na(cro$OutdoorTemp),0,1)
-  cro$InGE85 <- ifelse(with(cro, Temp>=85)==TRUE,1,0)
-  cro$OutGE85 <- ifelse(with(cro, OutdoorTemp>=85)==TRUE,1,0)
+  cro$TimeUnit <- ifelse(cro$Time=="08:00",0,.25)
+  cro$OutTimeUnit <- ifelse((is.na(cro$OutdoorTemp) | cro$Time=="08:00"),0,.25)
+  cro$InGE85 <- ifelse((cro$Temp>=85)==TRUE & cro$Time!="08:00",.25,0)
+  cro$OutGE85 <-ifelse((cro$OutdoorTemp>=85)==TRUE & cro$Time!="08:00",.25,0)
+
+  hot <- ddply(cro, c("Date"), summarize, Hot=sum(OutGE85, na.rm=TRUE)) 
+  hot <- hot[hot$Hot>0,]
   
-  o.daily <- ddply(cro, "Season", summarize, OutGE85Count=sum(OutGE85, na.rm=TRUE), Count=sum(OutTimeUnit, na.rm=TRUE))
-  o.daily$OutGE85 <- with(o.daily, round(OutGE85Count/Count,2))
+    
+  o.daily <- ddply(cro, c("Date","Alias", "Month"), summarize, OutGE85Count=sum(OutGE85, na.rm=TRUE), Count=sum(OutTimeUnit, na.rm=TRUE))
+  o.daily <- ddply(o.daily, "Month", summarize, AvgHotHours=mean(OutGE85Count))
+  o.daily$AvgHotHours <- with(o.daily, round(AvgHotHours,2))
+  o.daily$monthdisp <- factor(o.daily$Month, orderedMonths)
   
-  cro.daily <- ddply(cro, c("Alias", "Season", "School"), summarize, InGE85Count=sum(InGE85), Count=sum(TimeUnit))
-  cro.daily$InGE85 <- with(cro.daily, round(InGE85Count/Count,2))
-  
-  cros.daily <- ddply(cro, c("Season", "School"), summarize, InGE85Count=sum(InGE85), Count=sum(TimeUnit))
-  cros.daily$InGE85 <- with(cros.daily, round(InGE85Count/Count,2))
-  
-  anno <- o.daily
-  anno$x <- 53
-  anno$y <- anno$OutGE85 + .02
-  anno$lab <- paste0("Outdoor average: ", anno$OutGE85)
-  anno <- anno[,c("x", "y", "lab", "Season")]
-  
-  annc <- cros.daily[cros.daily$School=="Campbell",]
-  annc$x <- 1
-  annc$y <- annc$InGE85 + .02
-  annc$lab <- paste0("School average: ", annc$InGE85)
-  annc <- annc[,c("x", "y", "lab", "Season","School")]
-  
-  anni <- cros.daily[cros.daily$School=="Ilima",]
-  anni$x <- 1
-  anni$y <- anni$InGE85 + .02
-  anni$lab <- paste0("School average: ", anni$InGE85)
-  anni <- anni[,c("x", "y", "lab", "Season","School")]
-  
-  annk <- cros.daily[cros.daily$School=="Kaimiloa",]
-  annk$x <- 1
-  annk$y <- annk$InGE85 + .02
-  annk$lab <- paste0("School average: ", annk$InGE85)
-  annk <- annk[,c("x", "y", "lab", "Season","School")]
-  
-  
-  ggplot() + geom_bar(data=cro.daily, aes(x=Alias, y=InGE85, fill=Alias), alpha=0.5, stat="identity") + 
-    geom_hline(data=o.daily, aes(yintercept=OutGE85), color="dimgrey") +
-    geom_text(data=anno, aes(x, y, label=lab, group=1), color="dimgrey", size=3, hjust="right") + 
-    geom_text(data=annc, aes(x, y, label=lab, group=1), color="dimgrey", size=3, hjust="left") + 
-    geom_text(data=anni, aes(x, y, label=lab, group=1), color="dimgrey", size=3, hjust="left") + 
-    geom_text(data=annk, aes(x, y, label=lab, group=1), color="dimgrey", size=3, hjust="left") + 
-    geom_hline(data=cros.daily, aes(yintercept=InGE85), color="dimgrey", linetype="dashed", alpha=0.8) +
-    facet_grid(School~Season, drop=FALSE) +
-    scale_y_continuous(breaks=seq(0,1,0.2)) +
-    ggtitle("Portion of School Day Hotter than 85 F") +
-    theme_fivethirtyeight() +
-    theme(axis.text.x = element_text(angle=60, hjust=1)) + guides(fill=guide_legend(ncol=13))
-  
-  o.daily <- ddply(cro, "Month", summarize, OutGE85Count=sum(OutGE85, na.rm=TRUE), Count=sum(OutTimeUnit, na.rm=TRUE))
-  o.daily$OutGE85 <- with(o.daily, round(OutGE85Count/Count,2))
-  o.daily$monthdisp <- factor(o.daily$Month, orderedMonths)  
-  
-  cro.daily <- ddply(cro, c("Alias", "Month", "School"), summarize, InGE85Count=sum(InGE85), Count=sum(TimeUnit))
-  cro.daily$InGE85 <- with(cro.daily, round(InGE85Count/Count,2))
+    
+  cro.daily <- ddply(cro, c("Date","Alias", "Month", "School"), summarize, InGE85Count=sum(InGE85, na.rm=TRUE), Count=sum(TimeUnit, na.rm=TRUE))
+  cro.daily <- ddply(cro.daily, c("Month", "Alias"), summarize, AvgHotHours=mean(InGE85Count))
+  cro.daily$AvgHotHours <- with(cro.daily, round(AvgHotHours,2))
   cro.daily$monthdisp <- factor(cro.daily$Month, orderedMonths)
+  cro.daily$School <- sub("(.*?) - .*", "\\1", cro.daily$Alias)
+
   
-  cros.daily <- ddply(cro, c("School", "Month"), summarize, InGE85Count=sum(InGE85), Count=sum(TimeUnit))
-  cros.daily$InGE85 <- with(cros.daily, round(InGE85Count/Count,2))
+  cros.daily <- ddply(cro, c("Date","Alias", "Month", "School"), summarize, InGE85Count=sum(InGE85, na.rm=TRUE), Count=sum(TimeUnit, na.rm=TRUE))
+  cros.daily <- ddply(cros.daily, c("Month", "School"), summarize, AvgHotHours=mean(InGE85Count))
+  cros.daily$AvgHotHours <- with(cros.daily, round(AvgHotHours,2))
   cros.daily$monthdisp <- factor(cros.daily$Month, orderedMonths)
   
   anno <- o.daily
-  anno$x <- 50
-  anno$y <- anno$OutGE85 + .02
-  anno$lab <- paste0("Outdoor average: ", anno$OutGE85)
+  anno$x <- 30
+  anno$y <- anno$AvgHotHours + .1
+  anno$lab <- paste0("Outdoor: ", anno$AvgHotHours)
   anno <- anno[,c("x", "y", "lab", "Month")]
   anno$monthdisp <- factor(anno$Month, orderedMonths)
   
   annc <- cros.daily[cros.daily$School=="Campbell",]
   annc$x <- 1
-  annc$y <- annc$InGE85 + .02
-  annc$lab <- paste0("School average: ", annc$InGE85)
+  annc$y <- annc$AvgHotHours + .1
+  annc$lab <- paste0("School Average: ", annc$AvgHotHours)
   annc <- annc[,c("x", "y", "lab", "Month","School")]
   annc$monthdisp <- factor(annc$Month, orderedMonths)
   
   anni <- cros.daily[cros.daily$School=="Ilima",]
   anni$x <- 1
-  anni$y <- anni$InGE85 + .02
-  anni$lab <- paste0("School average: ", anni$InGE85)
+  anni$y <- anni$AvgHotHours + .1
+  anni$lab <- paste0("School Average: ", anni$AvgHotHours)
   anni <- anni[,c("x", "y", "lab", "Month","School")]
   anni$monthdisp <- factor(anni$Month, orderedMonths)
   
   annk <- cros.daily[cros.daily$School=="Kaimiloa",]
   annk$x <- 1
-  annk$y <- annk$InGE85 + .02
-  annk$lab <- paste0("School average: ", annk$InGE85)
+  annk$y <- annk$AvgHotHours + .1
+  annk$lab <- paste0("School Average: ", annk$AvgHotHours)
   annk <- annk[,c("x", "y", "lab", "Month","School")]
   annk$monthdisp <- factor(annk$Month, orderedMonths)
+
+  plot.title <- "James Campbell High School"
+  plot.subtitle <- "Number of School Hours Above 85 F, All Days"
   
-  ggplot() + geom_bar(data=cro.daily, aes(x=Alias, y=InGE85, fill=Alias), alpha=0.5, stat="identity") + 
-    geom_hline(data=o.daily, aes(yintercept=OutGE85), color="dimgrey") +
-    geom_hline(data=cros.daily, aes(yintercept=InGE85), color="dimgrey", linetype="dashed", alpha=0.8) +
+  
+  bc1 <- ggplot() + geom_bar(data=cro.daily[cro.daily$School=="Campbell",], aes(x=Alias, y=AvgHotHours, fill="#30A2DA"), alpha=0.5, stat="identity") + 
+    geom_hline(data=o.daily, aes(yintercept=AvgHotHours), color="dimgrey") +
+    geom_hline(data=cros.daily[cros.daily$School=="Campbell",], aes(yintercept=AvgHotHours), color="dimgrey", linetype="dashed", alpha=0.8) +
     geom_text(data=anno, aes(x, y, label=lab, group=1), color="dimgrey", size=3, hjust="right") + 
     geom_text(data=annc, aes(x, y, label=lab, group=1), color="dimgrey", size=3, hjust="left") + 
+    facet_grid(~monthdisp, drop=FALSE) +
+    scale_y_continuous(breaks=seq(0,6,1)) +
+    ggtitle(bquote(atop(.(plot.title), atop(.(plot.subtitle), "")))) +
+    theme_fivethirtyeight() +
+    theme(axis.text.x = element_blank(), legend.position="none")
+  
+  plot.title <- "Ilima Intermediate School"
+  plot.subtitle <- "Number of School Hours Above 85 F, All Days"
+  
+  anno <- o.daily
+  anno$x <- 12
+  anno$y <- anno$AvgHotHours + .1
+  anno$lab <- paste0("Outdoor: ", anno$AvgHotHours)
+  anno <- anno[,c("x", "y", "lab", "Month")]
+  anno$monthdisp <- factor(anno$Month, orderedMonths)
+  
+  
+  bi1 <- ggplot() + geom_bar(data=cro.daily[cro.daily$School=="Ilima",], aes(x=Alias, y=AvgHotHours, fill="#30A2DA"), alpha=0.5, stat="identity") + 
+    geom_hline(data=o.daily, aes(yintercept=AvgHotHours), color="dimgrey") +
+    geom_hline(data=cros.daily[cros.daily$School=="Ilima",], aes(yintercept=AvgHotHours), color="dimgrey", linetype="dashed", alpha=0.8) +
+    geom_text(data=anno, aes(x, y, label=lab, group=1), color="dimgrey", size=3, hjust="right") + 
     geom_text(data=anni, aes(x, y, label=lab, group=1), color="dimgrey", size=3, hjust="left") + 
+    facet_grid(~monthdisp, drop=FALSE) +
+    scale_y_continuous(breaks=seq(0,6,1)) +
+    ggtitle(bquote(atop(.(plot.title), atop(.(plot.subtitle), "")))) +
+    theme_fivethirtyeight() +
+    theme(axis.text.x = element_blank(), legend.position="none")
+  
+  plot.title <- "Kaimiloa Elementary School"
+  plot.subtitle <- "Number of School Hours Above 85 F, All Days"
+  
+  anno <- o.daily
+  anno$x <- 10
+  anno$y <- anno$AvgHotHours + .1
+  anno$lab <- paste0("Outdoor: ", anno$AvgHotHours)
+  anno <- anno[,c("x", "y", "lab", "Month")]
+  anno$monthdisp <- factor(anno$Month, orderedMonths)
+  
+  bk1 <- ggplot() + geom_bar(data=cro.daily[cro.daily$School=="Kaimiloa",], aes(x=Alias, y=AvgHotHours, fill="#30A2DA"), alpha=0.5, stat="identity") + 
+    geom_hline(data=o.daily, aes(yintercept=AvgHotHours), color="dimgrey") +
+    geom_hline(data=cros.daily[cros.daily$School=="Kaimiloa",], aes(yintercept=AvgHotHours), color="dimgrey", linetype="dashed", alpha=0.8) +
+    geom_text(data=anno, aes(x, y, label=lab, group=1), color="dimgrey", size=3, hjust="right") + 
     geom_text(data=annk, aes(x, y, label=lab, group=1), color="dimgrey", size=3, hjust="left") + 
-    facet_grid(School~monthdisp, drop=FALSE) +
-    scale_y_continuous(breaks=seq(0,1,0.2)) +
-    ggtitle("Portion of School Day Hotter than 85 F") +
+    facet_grid(~monthdisp, drop=FALSE) +
+    scale_y_continuous(breaks=seq(0,6,1)) +
+    ggtitle(bquote(atop(.(plot.title), atop(.(plot.subtitle), "")))) +
     theme_fivethirtyeight() +
     theme(axis.text.x = element_blank(), legend.position="none")
   
   
+  croHot <- merge(cro, hot, by="Date")
+  
+  o.daily <- ddply(croHot, c("Date","Alias", "Month"), summarize, OutGE85Count=sum(OutGE85, na.rm=TRUE), Count=sum(OutTimeUnit, na.rm=TRUE))
+  o.daily <- ddply(o.daily, "Month", summarize, AvgHotHours=mean(OutGE85Count))
+  o.daily$AvgHotHours <- with(o.daily, round(AvgHotHours,2))
+  o.daily$monthdisp <- factor(o.daily$Month, orderedMonths)
   
   
-  cr <- ddply(crt, c("Time", "Alias", "Season", "School"), summarize, AvgTemp=mean(Temp))
-  ot$Season <- as.factor(ifelse(month(ot$Date) %in% c(1,2,3,4,11,12),"Winter","Summer")) 
-  o <- ddply(ot, c("Time", "Season"), summarize, AvgTemp=mean(OutdoorTemp))
+  cro.daily <- ddply(croHot, c("Date","Alias", "Month", "School"), summarize, InGE85Count=sum(InGE85, na.rm=TRUE), Count=sum(TimeUnit, na.rm=TRUE))
+  cro.daily <- ddply(cro.daily, c("Month", "Alias"), summarize, AvgHotHours=mean(InGE85Count))
+  cro.daily$AvgHotHours <- with(cro.daily, round(AvgHotHours,2))
+  cro.daily$monthdisp <- factor(cro.daily$Month, orderedMonths)
+  cro.daily$School <- sub("(.*?) - .*", "\\1", cro.daily$Alias)
   
-  o$Time <- as.POSIXct(o$Time, format="%H:%M", tz="UTC")
-  cr$Time <- as.POSIXct(cr$Time, format="%H:%M", tz="UTC")
   
-  ggplot() + 
-    geom_hline(yintercept=85, linetype="dotted", color="black") +
-    geom_line(data=cr, aes(x=Time, y=AvgTemp, group=Alias, color=Alias), size=0.5, alpha=0.5) +
-    geom_line(data=o, aes(x=Time, y=AvgTemp, group=1), color="dimgrey", size=0.8) +
-    facet_grid(School~Season) +
-    scale_y_continuous(breaks=seq(75,100,5)) +
-    scale_x_datetime(breaks=date_breaks("1 hour"), labels=date_format("%H:%M")) +
-    ggtitle("Average School Day Temperature") +
-    theme_fivethirtyeight() + guides(color=guide_legend(ncol=13))
+  cros.daily <- ddply(croHot, c("Date","Alias", "Month", "School"), summarize, InGE85Count=sum(InGE85, na.rm=TRUE), Count=sum(TimeUnit, na.rm=TRUE))
+  cros.daily <- ddply(cros.daily, c("Month", "School"), summarize, AvgHotHours=mean(InGE85Count))
+  cros.daily$AvgHotHours <- with(cros.daily, round(AvgHotHours,2))
+  cros.daily$monthdisp <- factor(cros.daily$Month, orderedMonths)
   
+  anno <- o.daily
+  anno$x <- 30
+  anno$y <- anno$AvgHotHours + .1
+  anno$lab <- paste0("Outdoor: ", anno$AvgHotHours)
+  anno <- anno[,c("x", "y", "lab", "Month")]
+  anno$monthdisp <- factor(anno$Month, orderedMonths)
+  
+  annc <- cros.daily[cros.daily$School=="Campbell",]
+  annc$x <- 1
+  annc$y <- annc$AvgHotHours + .1
+  annc$lab <- paste0("School Average: ", annc$AvgHotHours)
+  annc <- annc[,c("x", "y", "lab", "Month","School")]
+  annc$monthdisp <- factor(annc$Month, orderedMonths)
+  
+  anni <- cros.daily[cros.daily$School=="Ilima",]
+  anni$x <- 1
+  anni$y <- anni$AvgHotHours + .1
+  anni$lab <- paste0("School Average: ", anni$AvgHotHours)
+  anni <- anni[,c("x", "y", "lab", "Month","School")]
+  anni$monthdisp <- factor(anni$Month, orderedMonths)
+  
+  annk <- cros.daily[cros.daily$School=="Kaimiloa",]
+  annk$x <- 1
+  annk$y <- annk$AvgHotHours + .1
+  annk$lab <- paste0("School Average: ", annk$AvgHotHours)
+  annk <- annk[,c("x", "y", "lab", "Month","School")]
+  annk$monthdisp <- factor(annk$Month, orderedMonths)
+  
+  plot.title <- ""
+  plot.subtitle <- "Number of School Hours Above 85 F, Hot Days"
+  
+  
+  bc2 <- ggplot() + geom_bar(data=cro.daily[cro.daily$School=="Campbell",], aes(x=Alias, y=AvgHotHours, fill="#30A2DA"), alpha=0.5, stat="identity") + 
+    geom_hline(data=o.daily, aes(yintercept=AvgHotHours), color="dimgrey") +
+    geom_hline(data=cros.daily[cros.daily$School=="Campbell",], aes(yintercept=AvgHotHours), color="dimgrey", linetype="dashed", alpha=0.8) +
+    geom_text(data=anno, aes(x, y, label=lab, group=1), color="dimgrey", size=3, hjust="right") + 
+    geom_text(data=annc, aes(x, y, label=lab, group=1), color="dimgrey", size=3, hjust="left") + 
+    facet_grid(~monthdisp, drop=FALSE) +
+    scale_y_continuous(breaks=seq(0,6,1)) +
+    ggtitle(bquote(atop(.(plot.title), atop(.(plot.subtitle), "")))) +
+    theme_fivethirtyeight() +
+    theme(axis.text.x = element_blank(), legend.position="none")
+  
+  
+  anno <- o.daily
+  anno$x <- 12
+  anno$y <- anno$AvgHotHours + .1
+  anno$lab <- paste0("Outdoor: ", anno$AvgHotHours)
+  anno <- anno[,c("x", "y", "lab", "Month")]
+  anno$monthdisp <- factor(anno$Month, orderedMonths)
+  
+  
+  bi2 <- ggplot() + geom_bar(data=cro.daily[cro.daily$School=="Ilima",], aes(x=Alias, y=AvgHotHours, fill="#30A2DA"), alpha=0.5, stat="identity") + 
+    geom_hline(data=o.daily, aes(yintercept=AvgHotHours), color="dimgrey") +
+    geom_hline(data=cros.daily[cros.daily$School=="Ilima",], aes(yintercept=AvgHotHours), color="dimgrey", linetype="dashed", alpha=0.8) +
+    geom_text(data=anno, aes(x, y, label=lab, group=1), color="dimgrey", size=3, hjust="right") + 
+    geom_text(data=anni, aes(x, y, label=lab, group=1), color="dimgrey", size=3, hjust="left") + 
+    facet_grid(~monthdisp, drop=FALSE) +
+    scale_y_continuous(breaks=seq(0,6,1)) +
+    ggtitle(bquote(atop(.(plot.title), atop(.(plot.subtitle), "")))) +
+    theme_fivethirtyeight() +
+    theme(axis.text.x = element_blank(), legend.position="none")
+  
+  
+  anno <- o.daily
+  anno$x <- 10
+  anno$y <- anno$AvgHotHours + .1
+  anno$lab <- paste0("Outdoor: ", anno$AvgHotHours)
+  anno <- anno[,c("x", "y", "lab", "Month")]
+  anno$monthdisp <- factor(anno$Month, orderedMonths)
+  
+  bk2 <- ggplot() + geom_bar(data=cro.daily[cro.daily$School=="Kaimiloa",], aes(x=Alias, y=AvgHotHours, fill="#30A2DA"), alpha=0.5, stat="identity") + 
+    geom_hline(data=o.daily, aes(yintercept=AvgHotHours), color="dimgrey") +
+    geom_hline(data=cros.daily[cros.daily$School=="Kaimiloa",], aes(yintercept=AvgHotHours), color="dimgrey", linetype="dashed", alpha=0.8) +
+    geom_text(data=anno, aes(x, y, label=lab, group=1), color="dimgrey", size=3, hjust="right") + 
+    geom_text(data=annk, aes(x, y, label=lab, group=1), color="dimgrey", size=3, hjust="left") + 
+    facet_grid(~monthdisp, drop=FALSE) +
+    scale_y_continuous(breaks=seq(0,6,1)) +
+    ggtitle(bquote(atop(.(plot.title), atop(.(plot.subtitle), "")))) +
+    theme_fivethirtyeight() +
+    theme(axis.text.x = element_blank(), legend.position="none")
+  
+  croMax <- merge(cro, hotMonths, by=c("Date","Month"))
+  
+  o.daily <- ddply(croMax, c("Date","Alias", "Month"), summarize, OutGE85Count=sum(OutGE85, na.rm=TRUE), Count=sum(OutTimeUnit, na.rm=TRUE))
+  o.daily <- ddply(o.daily, "Month", summarize, AvgHotHours=mean(OutGE85Count))
+  o.daily$AvgHotHours <- with(o.daily, round(AvgHotHours,2))
+  o.daily$monthdisp <- factor(o.daily$Month, orderedMonths)
+  
+  
+  cro.daily <- ddply(croMax, c("Date","Alias", "Month", "School"), summarize, InGE85Count=sum(InGE85, na.rm=TRUE), Count=sum(TimeUnit, na.rm=TRUE))
+  cro.daily <- ddply(cro.daily, c("Month", "Alias"), summarize, AvgHotHours=mean(InGE85Count))
+  cro.daily$AvgHotHours <- with(cro.daily, round(AvgHotHours,2))
+  cro.daily$monthdisp <- factor(cro.daily$Month, orderedMonths)
+  cro.daily$School <- sub("(.*?) - .*", "\\1", cro.daily$Alias)
+  
+  
+  cros.daily <- ddply(croMax, c("Date","Alias", "Month", "School"), summarize, InGE85Count=sum(InGE85, na.rm=TRUE), Count=sum(TimeUnit, na.rm=TRUE))
+  cros.daily <- ddply(cros.daily, c("Month", "School"), summarize, AvgHotHours=mean(InGE85Count))
+  cros.daily$AvgHotHours <- with(cros.daily, round(AvgHotHours,2))
+  cros.daily$monthdisp <- factor(cros.daily$Month, orderedMonths)
+  
+  anno <- o.daily
+  anno$x <- 30
+  anno$y <- anno$AvgHotHours + .1
+  anno$lab <- paste0("Outdoor: ", anno$AvgHotHours)
+  anno <- anno[,c("x", "y", "lab", "Month")]
+  anno$monthdisp <- factor(anno$Month, orderedMonths)
+  
+  annc <- cros.daily[cros.daily$School=="Campbell",]
+  annc$x <- 1
+  annc$y <- annc$AvgHotHours + .1
+  annc$lab <- paste0("School Average: ", annc$AvgHotHours)
+  annc <- annc[,c("x", "y", "lab", "Month","School")]
+  annc$monthdisp <- factor(annc$Month, orderedMonths)
+  
+  anni <- cros.daily[cros.daily$School=="Ilima",]
+  anni$x <- 1
+  anni$y <- anni$AvgHotHours + .1
+  anni$lab <- paste0("School Average: ", anni$AvgHotHours)
+  anni <- anni[,c("x", "y", "lab", "Month","School")]
+  anni$monthdisp <- factor(anni$Month, orderedMonths)
+  
+  annk <- cros.daily[cros.daily$School=="Kaimiloa",]
+  annk$x <- 1
+  annk$y <- annk$AvgHotHours + .1
+  annk$lab <- paste0("School Average: ", annk$AvgHotHours)
+  annk <- annk[,c("x", "y", "lab", "Month","School")]
+  annk$monthdisp <- factor(annk$Month, orderedMonths)
+  
+  plot.subtitle <- "Number of School Hours Above 85 F, Hottest Day"
+  
+  
+  bc3 <- ggplot() + geom_bar(data=cro.daily[cro.daily$School=="Campbell",], aes(x=Alias, y=AvgHotHours, fill="#30A2DA"), alpha=0.5, stat="identity") + 
+    geom_hline(data=o.daily, aes(yintercept=AvgHotHours), color="dimgrey") +
+    geom_hline(data=cros.daily[cros.daily$School=="Campbell",], aes(yintercept=AvgHotHours), color="dimgrey", linetype="dashed", alpha=0.8) +
+    geom_text(data=anno, aes(x, y, label=lab, group=1), color="dimgrey", size=3, hjust="right") + 
+    geom_text(data=annc, aes(x, y, label=lab, group=1), color="dimgrey", size=3, hjust="left") + 
+    facet_grid(~monthdisp, drop=FALSE) +
+    scale_y_continuous(breaks=seq(0,6,1)) +
+    ggtitle(bquote(atop(.(plot.title), atop(.(plot.subtitle), "")))) +
+    theme_fivethirtyeight() +
+    theme(axis.text.x = element_blank(), legend.position="none")
+  
+
+  
+  anno <- o.daily
+  anno$x <- 12
+  anno$y <- anno$AvgHotHours + .1
+  anno$lab <- paste0("Outdoor: ", anno$AvgHotHours)
+  anno <- anno[,c("x", "y", "lab", "Month")]
+  anno$monthdisp <- factor(anno$Month, orderedMonths)
+  
+  
+  bi3 <- ggplot() + geom_bar(data=cro.daily[cro.daily$School=="Ilima",], aes(x=Alias, y=AvgHotHours, fill="#30A2DA"), alpha=0.5, stat="identity") + 
+    geom_hline(data=o.daily, aes(yintercept=AvgHotHours), color="dimgrey") +
+    geom_hline(data=cros.daily[cros.daily$School=="Ilima",], aes(yintercept=AvgHotHours), color="dimgrey", linetype="dashed", alpha=0.8) +
+    geom_text(data=anno, aes(x, y, label=lab, group=1), color="dimgrey", size=3, hjust="right") + 
+    geom_text(data=anni, aes(x, y, label=lab, group=1), color="dimgrey", size=3, hjust="left") + 
+    facet_grid(~monthdisp, drop=FALSE) +
+    scale_y_continuous(breaks=seq(0,6,1)) +
+    ggtitle(bquote(atop(.(plot.title), atop(.(plot.subtitle), "")))) +
+    theme_fivethirtyeight() +
+    theme(axis.text.x = element_blank(), legend.position="none")
+  
+
+  
+  anno <- o.daily
+  anno$x <- 10
+  anno$y <- anno$AvgHotHours + .1
+  anno$lab <- paste0("Outdoor: ", anno$AvgHotHours)
+  anno <- anno[,c("x", "y", "lab", "Month")]
+  anno$monthdisp <- factor(anno$Month, orderedMonths)
+  
+  bk3 <- ggplot() + geom_bar(data=cro.daily[cro.daily$School=="Kaimiloa",], aes(x=Alias, y=AvgHotHours, fill="#30A2DA"), alpha=0.5, stat="identity") + 
+    geom_hline(data=o.daily, aes(yintercept=AvgHotHours), color="dimgrey") +
+    geom_hline(data=cros.daily[cros.daily$School=="Kaimiloa",], aes(yintercept=AvgHotHours), color="dimgrey", linetype="dashed", alpha=0.8) +
+    geom_text(data=anno, aes(x, y, label=lab, group=1), color="dimgrey", size=3, hjust="right") + 
+    geom_text(data=annk, aes(x, y, label=lab, group=1), color="dimgrey", size=3, hjust="left") + 
+    facet_grid(~monthdisp, drop=FALSE) +
+    scale_y_continuous(breaks=seq(0,6,1)) +
+    ggtitle(bquote(atop(.(plot.title), atop(.(plot.subtitle), "")))) +
+    theme_fivethirtyeight() +
+    theme(axis.text.x = element_blank(), legend.position="none")
+  
+  grid.arrange(bk1,bk2,bk3, layout_matrix=rbind(c(1), c(2), c(3)))
+  grid.arrange(bc1,bc2,bc3, layout_matrix=rbind(c(1), c(2), c(3)))
+  grid.arrange(bi1,bi2,bi3, layout_matrix=rbind(c(1), c(2), c(3)))
+  
+  
+  #Line
   cr <- ddply(crt, c("Time", "Alias", "Month", "School"), summarize, AvgTemp=mean(Temp))
   o <- ddply(ot, c("Time", "Month"), summarize, AvgTemp=mean(OutdoorTemp))
   
@@ -198,16 +447,135 @@
   o$monthdisp <- factor(o$Month, orderedMonths)
   cr$monthdisp <- factor(cr$Month, orderedMonths)
   
-  ggplot() + 
-    geom_hline(yintercept=85, linetype="dotted", color="black") +
-    geom_line(data=cr, aes(x=Time, y=AvgTemp, group=Alias, color=Alias), size=0.5, alpha=0.5) +
-    geom_line(data=o, aes(x=Time, y=AvgTemp, group=1), color="dimgrey", size=0.8) +
-    facet_grid(School~monthdisp) +
-    scale_y_continuous(breaks=seq(75,100,5)) +
-    scale_x_datetime(breaks=date_breaks("1 hour"), labels=date_format("%H:%M")) +
-    ggtitle("Average School Day Temperature") +
-    theme_fivethirtyeight() + guides(color=guide_legend(ncol=13))
+  plot.title <- "James Campbell High School"
+  plot.subtitle <- "Average School Day Temperature, All Days"
   
+  lc1 <- ggplot() + 
+    geom_hline(yintercept=85, linetype="dotted", color="black") +
+    geom_line(data=cr[cr$School=="Campbell",], aes(x=Time, y=AvgTemp, group=Alias, color="#30A2DA"), size=0.5, alpha=0.5) +
+    geom_line(data=o, aes(x=Time, y=AvgTemp, group=1), color="dimgrey", size=0.8) +
+    facet_grid(~monthdisp) +
+    scale_y_continuous(breaks=seq(75,100,5)) +
+    scale_x_datetime(breaks=date_breaks("2 hour"), labels=date_format("%H:%M")) +
+    ggtitle(bquote(atop(.(plot.title), atop(.(plot.subtitle), "")))) +
+    theme_fivethirtyeight() + theme(legend.position="none")
+
+  
+  plot.title <- "Kaimiloa Elementary School"
+
+  lk1 <- ggplot() + 
+    geom_hline(yintercept=85, linetype="dotted", color="black") +
+    geom_line(data=cr[cr$School=="Kaimiloa",], aes(x=Time, y=AvgTemp, group=Alias, color="#30A2DA"), size=0.5, alpha=0.5) +
+    geom_line(data=o, aes(x=Time, y=AvgTemp, group=1), color="dimgrey", size=0.8) +
+    facet_grid(~monthdisp) +
+    scale_y_continuous(breaks=seq(75,100,5)) +
+    scale_x_datetime(breaks=date_breaks("2 hour"), labels=date_format("%H:%M")) +
+    ggtitle(bquote(atop(.(plot.title), atop(.(plot.subtitle), "")))) +
+    theme_fivethirtyeight() + theme(legend.position="none")
+  
+  plot.title <- "Ilima Intermediate School"
+  
+  li1 <- ggplot() + 
+    geom_hline(yintercept=85, linetype="dotted", color="black") +
+    geom_line(data=cr[cr$School=="Ilima",], aes(x=Time, y=AvgTemp, group=Alias, color="#30A2DA"), size=0.5, alpha=0.5) +
+    geom_line(data=o, aes(x=Time, y=AvgTemp, group=1), color="dimgrey", size=0.8) +
+    facet_grid(~monthdisp) +
+    scale_y_continuous(breaks=seq(75,100,5)) +
+    scale_x_datetime(breaks=date_breaks("2 hour"), labels=date_format("%H:%M")) +
+    ggtitle(bquote(atop(.(plot.title), atop(.(plot.subtitle), "")))) +
+    theme_fivethirtyeight() + theme(legend.position="none")
+  
+  otHot <- ot[ot$OutdoorTemp>=85,]
+  crHot <- merge(otHot, crt, by=c("Date", "Time", "Month"))  
+  cr <- ddply(crHot, c("Time", "Alias", "Month", "School"), summarize, AvgTemp=mean(Temp))
+  o <- ddply(otHot, c("Time", "Month"), summarize, AvgTemp=mean(OutdoorTemp))
+  
+  o$Time <- as.POSIXct(o$Time, format="%H:%M", tz="UTC")
+  cr$Time <- as.POSIXct(cr$Time, format="%H:%M", tz="UTC")
+  o$monthdisp <- factor(o$Month, orderedMonths)
+  cr$monthdisp <- factor(cr$Month, orderedMonths)
+  
+  
+  plot.title <- ""
+  plot.subtitle <- "Average School Day Temperature, Hot Days"
+  
+  lc2 <- ggplot() + 
+    geom_hline(yintercept=85, linetype="dotted", color="black") +
+    geom_line(data=cr[cr$School=="Campbell",], aes(x=Time, y=AvgTemp, group=Alias, color="#30A2DA"), size=0.5, alpha=0.5) +
+    geom_line(data=o, aes(x=Time, y=AvgTemp, group=1), color="dimgrey", size=0.8) +
+    facet_grid(~monthdisp) +
+    scale_y_continuous(breaks=seq(75,100,5)) +
+    scale_x_datetime(breaks=date_breaks("2 hour"), labels=date_format("%H:%M")) +
+    ggtitle(bquote(atop(.(plot.title), atop(.(plot.subtitle), "")))) +
+    theme_fivethirtyeight() + theme(legend.position="none")
+  
+  lk2 <- ggplot() + 
+    geom_hline(yintercept=85, linetype="dotted", color="black") +
+    geom_line(data=cr[cr$School=="Kaimiloa",], aes(x=Time, y=AvgTemp, group=Alias, color="#30A2DA"), size=0.5, alpha=0.5) +
+    geom_line(data=o, aes(x=Time, y=AvgTemp, group=1), color="dimgrey", size=0.8) +
+    facet_grid(~monthdisp) +
+    scale_y_continuous(breaks=seq(75,100,5)) +
+    scale_x_datetime(breaks=date_breaks("2 hour"), labels=date_format("%H:%M")) +
+    ggtitle(bquote(atop(.(plot.title), atop(.(plot.subtitle), "")))) +
+    theme_fivethirtyeight() + theme(legend.position="none")
+  
+  li2 <- ggplot() + 
+    geom_hline(yintercept=85, linetype="dotted", color="black") +
+    geom_line(data=cr[cr$School=="Ilima",], aes(x=Time, y=AvgTemp, group=Alias, color="#30A2DA"), size=0.5, alpha=0.5) +
+    geom_line(data=o, aes(x=Time, y=AvgTemp, group=1), color="dimgrey", size=0.8) +
+    facet_grid(~monthdisp) +
+    scale_y_continuous(breaks=seq(75,100,5)) +
+    scale_x_datetime(breaks=date_breaks("2 hour"), labels=date_format("%H:%M")) +
+    ggtitle(bquote(atop(.(plot.title), atop(.(plot.subtitle), "")))) +
+    theme_fivethirtyeight() + theme(legend.position="none")
+  
+  cr <- merge(crt, hotMonths, by=c("Date","Month"))
+  o <- merge(ot, hotMonths, by=c("Date","Month"))
+  
+  o$Time <- as.POSIXct(o$Time, format="%H:%M", tz="UTC")
+  cr$Time <- as.POSIXct(cr$Time, format="%H:%M", tz="UTC")
+  o$monthdisp <- factor(o$Month, orderedMonths)
+  cr$monthdisp <- factor(cr$Month, orderedMonths)
+  
+  
+  plot.title <- ""
+  plot.subtitle <- "Average School Day Temperature, Hottest Day"
+  
+  lc3 <- ggplot() + 
+    geom_hline(yintercept=85, linetype="dotted", color="black") +
+    geom_line(data=cr[cr$School=="Campbell",], aes(x=Time, y=Temp, group=Alias, color="#30A2DA"), size=0.5, alpha=0.5) +
+    geom_line(data=o, aes(x=Time, y=OutdoorTemp, group=1), color="dimgrey", size=0.8) +
+    facet_grid(~monthdisp) +
+    scale_y_continuous(breaks=seq(75,100,5)) +
+    scale_x_datetime(breaks=date_breaks("2 hour"), labels=date_format("%H:%M")) +
+    ggtitle(bquote(atop(.(plot.title), atop(.(plot.subtitle), "")))) +
+    theme_fivethirtyeight() + theme(legend.position="none")
+  
+  lk3 <- ggplot() + 
+    geom_hline(yintercept=85, linetype="dotted", color="black") +
+    geom_line(data=cr[cr$School=="Kaimiloa",], aes(x=Time, y=Temp, group=Alias, color="#30A2DA"), size=0.5, alpha=0.5) +
+    geom_line(data=o, aes(x=Time, y=OutdoorTemp, group=1), color="dimgrey", size=0.8) +
+    facet_grid(~monthdisp) +
+    scale_y_continuous(breaks=seq(75,100,5)) +
+    scale_x_datetime(breaks=date_breaks("2 hour"), labels=date_format("%H:%M")) +
+    ggtitle(bquote(atop(.(plot.title), atop(.(plot.subtitle), "")))) +
+    theme_fivethirtyeight() + theme(legend.position="none")
+  
+  li3 <- ggplot() + 
+    geom_hline(yintercept=85, linetype="dotted", color="black") +
+    geom_line(data=cr[cr$School=="Ilima",], aes(x=Time, y=Temp, group=Alias, color="#30A2DA"), size=0.5, alpha=0.5) +
+    geom_line(data=o, aes(x=Time, y=OutdoorTemp, group=1), color="dimgrey", size=0.8) +
+    facet_grid(~monthdisp) +
+    scale_y_continuous(breaks=seq(75,100,5)) +
+    scale_x_datetime(breaks=date_breaks("2 hour"), labels=date_format("%H:%M")) +
+    ggtitle(bquote(atop(.(plot.title), atop(.(plot.subtitle), "")))) +
+    theme_fivethirtyeight() + theme(legend.position="none")
+  
+  grid.arrange(lk1,lk2,lk3, layout_matrix=rbind(c(1), c(2), c(3)))
+  grid.arrange(lc1,lc2,lc3, layout_matrix=rbind(c(1), c(2), c(3)))
+  grid.arrange(li1,li2,li3, layout_matrix=rbind(c(1), c(2), c(3)))
+  
+  #Overlap
   ot$Year <- as.factor(year(ot$Date))
   ot$Day <- as.character(format(ot$Date, "%m-%d"))
   otoverlap <- ot[ot$Month %in% c("August", "September", "October"),]
