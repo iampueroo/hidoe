@@ -62,7 +62,7 @@ AverageTempPlot <- function(rlist, var, minTemp) {
     roomsHot <- merge(roomsHot, get(paste0("roomHot",i)), by=c("Time","Month"), suffixes=c(i-1,i), all.x=TRUE, all.y=TRUE)
     
     assign(paste0("ann",i), data.frame(rt=as.POSIXct(format(strptime("01/01/16 8:00", format="%m/%d/%y %H:%M"), format="%H:%M"), format="%H:%M", tz="UTC"),
-                                       value=94-1.5*(i-1),
+                                       value=94-1.7*(i-1),
                                        lab=rlist[i],
                                        monthdisp = factor("August", levels=orderedMonths)))
   }
@@ -87,28 +87,30 @@ AverageTempPlot <- function(rlist, var, minTemp) {
   
   if (length(rlist)==3) {
     plot.title <- paste(r1.name,r2.name,r3.name, sep=" vs. ")
-    plot.subtitle <- paste0(var, ": ", paste(rlab1[,varCols], rlab2[,varCols], rlab3[,varCols], sep=" vs. "))
+    sub <- paste(var, paste(rlab1[,varCols], rlab2[,varCols], rlab3[,varCols], sep=" vs. "), sep=": ") 
   } else {
     plot.title <- paste(r1.name,r2.name, sep=" vs. ")
-    plot.subtitle <- paste0(var, ": ",paste(rlab1[,varCols], rlab2[,varCols], sep=" vs. ")) 
+    sub <-paste(var,paste(rlab1[,varCols], rlab2[,varCols], sep=" vs. "), sep=": ")
   }
+  plot1.subtitle <- "\nTemperature Averaged over All Observations" 
+  plot2.subtitle <- "Temperature Averaged over 'Hot' Observations (>85 F)"
+  plot3.subtitle <- "School Day with Greatest Absolute Temperature Difference"
   
   
   pa <- ggplot() +
     geom_line(data=rooms[rooms$variable=="outavg",], aes(x=Time, y=value), color="gray") +
     geom_line(data=rooms[rooms$variable!="outavg",], aes(x=Time, y=value, color=variable), size=0.8) +
-    geom_hline(yintercept=85, linetype="dotted", color="black") +
-    facet_wrap(~monthdisp, ncol=10) +
+    facet_wrap(~monthdisp, drop=FALSE, ncol=10) +
     scale_y_continuous(breaks=seq(60,110,5)) +
     scale_colour_manual(values=colors) +
     scale_x_datetime(breaks=date_breaks("2 hour"), labels=date_format("%H:%M")) +
-    ggtitle(bquote(atop(.(plot.title), atop(.(plot.subtitle), "")))) +
+    ggtitle(bquote(atop(.(plot.title), atop(bold(.(sub)), .(plot1.subtitle),"")))) +
     geom_text(data=ann1, aes(x=rt, y=value, label=lab, group=1), color="#CC6666", size=4, hjust=0) + 
     geom_text(data=ann2, aes(x=rt, y=value, label=lab, group=1), color="#9999CC", size=4, hjust=0) +
-    theme_fivethirtyeight() + theme(legend.position="none") 
-  
-  if (length(rlist)==3) {pa <- pa + geom_text(data=ann3, aes(x=rt, y=value, label=lab, group=1), color="#66CC99", size=4, hjust=0)}
+    theme_fivethirtyeight(base_family="Helvetica") + theme(legend.position="none") 
 
+  if (length(rlist)==3) {pa <- pa +  geom_text(data=ann3, aes(x=rt, y=value, label=lab, group=1), color="#66CC99", size=4, hjust=0)}
+  
   ### Average monthly temperature on school hour/days where outdoor temperature is above certain threshold
   oHot <- data.frame(ddply(otHot, c("Time", "Month"), summarise, outavg=mean(OutdoorTemp)))
   roomsHot <- merge(roomsHot, oHot, by=c("Time", "Month"))
@@ -116,17 +118,18 @@ AverageTempPlot <- function(rlist, var, minTemp) {
   roomsHot$monthdisp <- factor(roomsHot$Month, orderedMonths)
   roomsHot$Time <- as.POSIXct(roomsHot$Time, forma="%H:%M", tz="UTC")
   
+  plot.title <- ""
   
   lims <- as.POSIXct(strptime(c("08:00","14:00"), format = "%H:%M"), tz="UTC")    
   ph <- ggplot() +
     geom_line(data=roomsHot[roomsHot$variable=="outavg",], aes(x=Time, y=value), color="gray") +
     geom_line(data=roomsHot[roomsHot$variable!="outavg",], aes(x=Time, y=value, color=variable), size=0.8) +
-    geom_hline(yintercept=85, linetype="dotted", color="black") +
-    facet_wrap(~monthdisp, ncol=10) +
+    facet_wrap(~monthdisp, drop=FALSE, ncol=10) +
     scale_y_continuous(breaks=seq(60,110,5), limits=c(70,95)) +
     scale_colour_manual(values=colors) +
+    ggtitle(bquote(atop(.(plot.title), atop(.(plot2.subtitle), "")))) +
     scale_x_datetime(breaks=date_breaks("2 hour"), labels=date_format("%H:%M"), limits=lims) +
-    theme_fivethirtyeight() + theme(legend.position="none") 
+    theme_fivethirtyeight(base_family="Helvetica") + theme(legend.position="none") 
   
   ###  Monthly school hour/day with largest temperature differential between classrooms 
   d <- merge(r1[,c("Date", "Time", "Month", "Temp")], r2[,c("Date", "Time", "Temp")], by=c("Date", "Time"), suffixes=c("1","2"))
@@ -149,7 +152,7 @@ AverageTempPlot <- function(rlist, var, minTemp) {
   maxDiffRows$Date<- format(maxDiffRows$Date, format="%b %d, %Y")
   maxDiffRows$x <- as.POSIXct(format(strptime("01/01/16 11:00", format="%m/%d/%y %H:%M"), format="%H:%M"), format="%H:%M", tz="UTC")
   maxDiffRows$y <- 64
-  maxDiffRows$y2 <- 63
+  maxDiffRows$y2 <- 62.5
   maxDiffRows$lab1 <-   as.character(paste(maxDiffRows$Date, maxDiffRows$Time, sep=" "))
   maxDiffRows$lab2 <- as.character(round(maxDiffRows$TempDiff,2))
   maxDiffRows$monthdisp <- factor(maxDiffRows$Month, orderedMonths)
@@ -158,14 +161,14 @@ AverageTempPlot <- function(rlist, var, minTemp) {
   pd <- ggplot() +
     geom_line(data=roomsDiff[roomsDiff$variable=="OutdoorTemp",], aes(x=Time, y=value), color="gray") +
     geom_line(data=roomsDiff[roomsDiff$variable!="OutdoorTemp",], aes(x=Time, y=value, color=variable), size=0.8) +
-    geom_hline(yintercept=85, linetype="dotted", color="black") +
-    facet_wrap(~monthdisp, ncol=10, drop=FALSE) +
+    facet_wrap(~monthdisp, drop=FALSE, ncol=10) +
     scale_y_continuous(breaks=seq(60,110,5)) +
     scale_colour_manual(values=colors) +
+    ggtitle(bquote(atop(.(plot.title), atop(.(plot3.subtitle), "")))) +
     scale_x_datetime(breaks=date_breaks("2 hour"), labels=date_format("%H:%M")) +
     geom_text(data=maxDiffRows, aes(x, y, label=lab1, group=1), color="dimgrey", size=3, hjust="center") + 
     geom_text(data=maxDiffRows, aes(x, y2, label=paste("Maximum Difference:", lab2, "F", sep=" "), group=1), color="dimgrey", size=3, hjust="center") +
-    theme_fivethirtyeight() + theme(legend.position="none") 
+    theme_fivethirtyeight(base_family="Helvetica") + theme(legend.position="none") 
   
 
   
