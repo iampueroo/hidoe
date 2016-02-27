@@ -13,7 +13,7 @@
     ### Defined variables
     minTemp <- 85
     orderedMonths <- c("August", "September", "October", "November", "December", "January", "February", "March", "April", "May")
-    colors <- c("#8B8B8B", "#30A2DA", "#FC4F30",  "#E5AE38", "#6D904F")
+    colors <- c( "#30A2DA","#FC4F30",   "#8B8B8B", "#E5AE38", "#6D904F")
     colorsHeat <- c("#E69720", "#FC4F30", "#E8E827") 
   
     ## Input variables
@@ -29,38 +29,40 @@
     }
     
     ### Input data 
-    #sdates <- read.csv(file="~/dropbox/rh1/hidoe/day.csv", sep=",")  #school dates
-    #sdates$Date <- as.Date(sdates$rd, format="%m/%d/%y")
-    #sdates <- sdates[-c(1)]
-    #arch <- read.csv(file="~/dropbox/rh1/hidoe/classroom-csv.csv", sep=",") #classroom architectural data
-    #shours <- read.csv(file="~/dropbox/rh1/hidoe/hour.csv", sep=",")  #school hours
-    #shours$Time <- format(strptime(shours$Hour, format="%H:%M"), format="%H:%M")
-    #shours$Hour <- NULL
+    sdates <- read.csv(file="~/dropbox/rh1/hidoe/day.csv", sep=",")  #school dates
+    sdates$Date <- as.Date(sdates$rd, format="%m/%d/%y")
+    sdates <- sdates[-c(1)]
+    arch <- read.csv(file="~/dropbox/rh1/hidoe/classroom-csv.csv", sep=",") #classroom architectural data
+    shours <- read.csv(file="~/dropbox/rh1/hidoe/hour.csv", sep=",")  #school hours
+    shours$Time <- format(strptime(shours$Hour, format="%H:%M"), format="%H:%M")
+    shours$Hour <- NULL
     
-    #setwd("~/dropbox/rh1/hidoe/csv")
-    #crt <- do.call(rbind,lapply(dir(), read.csv)) #read all classroom sensor data
-    #names(crt) <- c("RoomID", "SensorAlias", "StartTime", "Temp", "RH", "Ill")
-    #crt <- merge(crt[,c(1,2,3,4)], arch[,c("RoomID", "Alias", "Floor", "RoofColor", "SQFT", "Orientation", "Landscape", "Overhang", "School", "AC")], by="RoomID", all.x=TRUE)
-    #crt$SensorAlias <- as.character(crt$SensorAlias)
-    #crt <- crt[(substr(crt$SensorAlias,nchar(crt$SensorAlias)-1,nchar(crt$SensorAlias))!="HD"),] #remove non 15 minute intervals - keep for now but need to discuss how to resolve this (maybe smoothing)
-    #crt$Date <- as.Date(crt$StartTime, format="%m/%d/%y")
-    #crt$Time <- format(strptime(crt$StartTime, format="%m/%d/%y %H:%M"), format="%H:%M")
-    #crt$Month <- format(crt$Date, "%B") 
-    #crt <- merge(crt, sdates, by="Date", all.x=FALSE) #restrict to school days
-    #crt <- merge(crt, shours, by="Time", all.x=FALSE) #restrict to school hours
-    #crt$StartTime <- NULL
-    #crt <- crt[!is.na(crt$Temp),] #remove RH/illuminance observations
-    #crt <- crt[crt$AC!=1,] #remove classrooms with AC
-    #crt$AC <- NULL
-    #crt <<- crt     
+    setwd("~/dropbox/rh1/hidoe/csv")
+    crt <- do.call(rbind,lapply(dir(), read.csv)) #read all classroom sensor data
+    names(crt) <- c("RoomID", "SensorAlias", "StartTime", "Temp", "RH", "Ill")
+    crt <- merge(crt[,c(1,2,3,4)], arch[,c("RoomID", "Alias", "Floor", "RoofColor", "SQFT", "Orientation", "Landscape", "Overhang", "School", "AC")], by="RoomID", all.x=TRUE)
+    crt$SensorAlias <- as.character(crt$SensorAlias)
+    crt <- crt[(substr(crt$SensorAlias,nchar(crt$SensorAlias)-1,nchar(crt$SensorAlias))!="HD"),] #remove non 15 minute intervals - keep for now but need to discuss how to resolve this (maybe smoothing)
+    crt$Date <- as.Date(crt$StartTime, format="%m/%d/%y")
+    crt$Time <- format(strptime(crt$StartTime, format="%m/%d/%y %H:%M"), format="%H:%M")
+    crt$Month <- format(crt$Date, "%B") 
+    crt <- merge(crt, sdates, by="Date", all.x=FALSE) #restrict to school days
+    crt <- merge(crt, shours, by="Time", all.x=FALSE) #restrict to school hours
+    crt$StartTime <- NULL
+    crt <- crt[!is.na(crt$Temp),] #remove RH/illuminance observations
+    crt <- crt[crt$AC!=1,] #remove classrooms with AC
+    crt$AC <- NULL
+    crt <<- crt     
     
-    
-    ot <- read.csv(file="~/dropbox/rh1/hidoe/outdoortemp.csv", sep=",") #outdoor temperature - switch to raw data with RH/wind speed
-    names(ot) <- c("DateTime", "OutdoorTemp")
+    ot <- read.csv(file="~/dropbox/rh1/hidoe/outdoor-csv.csv", sep=",") #outdoor temperature
+    names(ot) <- c("DateTime", "OutdoorTemp", "OutdoorUTCI")
     ot$Date <- as.Date(ot$DateTime, format="%m/%d/%y")
     ot$Time <- format(strptime(ot$DateTime, format="%m/%d/%y %H:%M"), format="%H:%M")
     ot$DateTime <- NULL
     ot$Month <- format(ot$Date, "%B")
+    ot <- merge(ot, sdates, by="Date", all.x=FALSE) #restrict to school days
+    ot <- merge(ot, shours, by="Time", all.x=FALSE) #restrict to school hours
+    
     
     #ot2013 <- ot[year(ot$Date)==2013,]
     #ot2014 <- ot[year(ot$Date)==2014,]
@@ -79,28 +81,27 @@
     #ggplot() + geom_smooth(data=otoverlap, aes(x=Day, y=OutdoorTemp, color=Year, group=Year)) + scale_y_continuous(breaks=seq(70,100,5), limits=c(70,100)) + ggtitle("Average Temperature of Overlapping Months (2013-2014)") + theme_fivethirtyeight()
     
     ### Plots
-    ot.daily <- ddply(ot,c("Date"), summarise, AvgOutdoorTemp=mean(OutdoorTemp)) #aggregated by date 
+    ot.daily <- ddply(ot,c("Date"), summarise, AvgOutdoorTemp=mean(OutdoorTemp), AvgOutdoorUTCI=mean(OutdoorUTCI)) #aggregated by date 
     crt.daily <- ddply(crt, c("Date", "Alias", "School"), summarise, AvgRoomTemp=mean(Temp, na.rm=TRUE), MaxRoomTemp=max(Temp,na.rm=TRUE)) #aggregated  by date
     cro.daily <- data.frame(merge(crt.daily, ot.daily, by=c("Date"), all.x=TRUE, all.y=TRUE)) 
     
     cro.daily <- melt(cro.daily, id.vars=c("Date", "Alias", "School"))
+    cro.room <- cro.daily[cro.daily$variable %in% c("AvgRoomTemp", "MaxRoomTemp"),]
+    cro.out <- cro.daily[cro.daily$variable %in% c("AvgOutdoorUTCI", "AvgOutdoorTemp"),]
     
-    ann.o <- data.frame(x=as.Date("2013-08-01", format="%Y-%m-%d"), y=72.5, lab="Average Outdoor Temperature", monthdisp=factor("August", levels=orderedMonths)) #average outdoor temp annotation
-    ann.a <- data.frame(x=as.Date("2013-08-01", format="%Y-%m-%d"), y=72, lab="Average Classroom Temperature", monthdisp=factor("August", levels=orderedMonths)) #average classroom temp annotation
-    ann.m <- data.frame(x=as.Date("2013-08-01", format="%Y-%m-%d"), y=71.5, lab="Maximum Classroom Temperature", monthdisp=factor("August", levels=orderedMonths)) #maximum classroom temp annotation
-    
-    p <- ggplot(cro.daily[cro.daily$School==school,], aes(x=Date, y=value, colour=variable)) + geom_point(data=cro.daily[cro.daily$School=="Kaimiloa" & cro.daily$variable!="AvgOutdoorTemp",], alpha=0.25) + geom_smooth(size=1) +
-      geom_hline(yintercept=85, linetype="dashed", color="dimgrey", size=0.8) + 
-      scale_y_continuous(breaks=seq(70,110,5), limits = c(70,110)) + 
+    p <- ggplot() +
+      geom_point(data=cro.room[cro.room$School==school,], aes(x=Date, y=value, color=variable), alpha=0.25) +
+      geom_smooth(data=cro.room[cro.room$School==school,], aes(x=Date, y=value, color=variable), size=1) +
+      geom_smooth(data=cro.out, aes(x=Date, y=value, linetype=variable), color="dimgrey", size=1) +
+      geom_hline(yintercept=85, linetype="dotted", color="dimgrey", size=0.8) + 
+      scale_y_continuous(breaks=seq(70,105,5), limits = c(70,105)) + 
       scale_colour_manual(values=colors) +
       scale_x_date(date_breaks="1 month", date_labels="%b '%y") + 
       ggtitle(paste("Average Daily Temperature: ", schoolTitle)) + 
       xlab("Date") + ylab(expression(paste("Temperature (", degree ~ F, ")"))) +
-      geom_text(data=ann.o, aes(x=x, y=y, label=lab, group=1), color="#8B8B8B", size=3, hjust=0) + 
-      geom_text(data=ann.a, aes(x=x, y=y, label=lab, group=1), color="#30A2DA", size=3, hjust=0) + 
-      geom_text(data=ann.m, aes(x=x, y=y, label=lab, group=1), color="#FC4F30", size=3, hjust=0) + 
-      theme_fivethirtyeight() +theme(legend.position="none", text=element_text(size=9)) 
-    
+      theme_fivethirtyeight() +theme(text=element_text(size=9), legend.title=element_blank()) + 
+      guides(colour = guide_legend(ncol=2, override.aes = list(size=1,linetype=0, fill=NA)), linetype = guide_legend(ncol=2, override.aes = list(fill=NA)))
+
     print(p)
     
     
