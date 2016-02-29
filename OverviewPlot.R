@@ -90,18 +90,20 @@
     cro.out <- cro.daily[cro.daily$variable %in% c("AvgOutdoorUTCI", "AvgOutdoorTemp"),]
     
     p <- ggplot() +
-      geom_point(data=cro.room[cro.room$School==school,], aes(x=Date, y=value, color=variable), alpha=0.25) +
-      geom_smooth(data=cro.room[cro.room$School==school,], aes(x=Date, y=value, color=variable), size=1) +
-      geom_smooth(data=cro.out, aes(x=Date, y=value, linetype=variable), color="dimgrey", size=1) +
+      geom_point(data=cro.daily[cro.daily$School==school & cro.daily$variable %in% c("AvgRoomTemp", "MaxRoomTemp"),], aes(x=Date, y=value, color=variable), alpha=0.25) +
+      geom_smooth(data=cro.daily[cro.daily$School==school & cro.daily$variable %in% c("AvgRoomTemp", "MaxRoomTemp"),], aes(x=Date, y=value, color=variable), size=1) +
+      geom_smooth(data=cro.daily[cro.daily$variable %in% c("AvgOutdoorUTCI", "AvgOutdoorTemp"),], aes(x=Date, y=value, linetype=variable), color="dimgrey", size=1) +
       geom_hline(yintercept=85, linetype="dotted", color="dimgrey", size=0.8) + 
       scale_y_continuous(breaks=seq(70,105,5), limits = c(70,105)) + 
-      scale_colour_manual(values=colors) +
       scale_x_date(date_breaks="1 month", date_labels="%b '%y") + 
       ggtitle(paste("Average Daily Temperature: ", schoolTitle)) + 
       xlab("Date") + ylab(expression(paste("Temperature (", degree ~ F, ")"))) +
+      scale_colour_manual(name = "", labels = c("Average Classroom Temperature", "Maximum Classroom Temperature"), values=colors) + 
+      scale_linetype_manual(name = "", labels = c("Average Outdoor Temperature", "Average Outdoor UTCI"), values=c("solid","dashed")) +
       theme_fivethirtyeight() +theme(text=element_text(size=9), legend.title=element_blank()) + 
       guides(colour = guide_legend(ncol=2, override.aes = list(size=1,linetype=0, fill=NA)), linetype = guide_legend(ncol=2, override.aes = list(fill=NA)))
 
+      
     print(p)
     
     
