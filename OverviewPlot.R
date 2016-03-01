@@ -29,39 +29,40 @@
     }
     
     ### Input data 
-    sdates <- read.csv(file="~/dropbox/rh1/hidoe/day.csv", sep=",")  #school dates
-    sdates$Date <- as.Date(sdates$rd, format="%m/%d/%y")
-    sdates <- sdates[-c(1)]
-    arch <- read.csv(file="~/dropbox/rh1/hidoe/classroom-csv.csv", sep=",") #classroom architectural data
-    shours <- read.csv(file="~/dropbox/rh1/hidoe/hour.csv", sep=",")  #school hours
-    shours$Time <- format(strptime(shours$Hour, format="%H:%M"), format="%H:%M")
-    shours$Hour <- NULL
+    #sdates <- read.csv(file="~/dropbox/rh1/hidoe/day.csv", sep=",")  #school dates
+    #sdates$Date <- as.Date(sdates$rd, format="%m/%d/%y")
+    #sdates <- sdates[-c(1)]
+    #arch <- read.csv(file="~/dropbox/rh1/hidoe/classroom-csv.csv", sep=",") #classroom architectural data
+    #shours <- read.csv(file="~/dropbox/rh1/hidoe/hour.csv", sep=",")  #school hours
+    #shours$Time <- format(strptime(shours$Hour, format="%H:%M"), format="%H:%M")
+    #shours$Hour <- NULL
     
-    setwd("~/dropbox/rh1/hidoe/csv")
-    crt <- do.call(rbind,lapply(dir(), read.csv)) #read all classroom sensor data
-    names(crt) <- c("RoomID", "SensorAlias", "StartTime", "Temp", "RH", "Ill")
-    crt <- merge(crt[,c(1,2,3,4)], arch[,c("RoomID", "Alias", "Floor", "RoofColor", "SQFT", "Orientation", "Landscape", "Overhang", "School", "AC")], by="RoomID", all.x=TRUE)
-    crt$SensorAlias <- as.character(crt$SensorAlias)
-    crt <- crt[(substr(crt$SensorAlias,nchar(crt$SensorAlias)-1,nchar(crt$SensorAlias))!="HD"),] #remove non 15 minute intervals - keep for now but need to discuss how to resolve this (maybe smoothing)
-    crt$Date <- as.Date(crt$StartTime, format="%m/%d/%y")
-    crt$Time <- format(strptime(crt$StartTime, format="%m/%d/%y %H:%M"), format="%H:%M")
-    crt$Month <- format(crt$Date, "%B") 
-    crt <- merge(crt, sdates, by="Date", all.x=FALSE) #restrict to school days
-    crt <- merge(crt, shours, by="Time", all.x=FALSE) #restrict to school hours
-    crt$StartTime <- NULL
-    crt <- crt[!is.na(crt$Temp),] #remove RH/illuminance observations
-    crt <- crt[crt$AC!=1,] #remove classrooms with AC
-    crt$AC <- NULL
-    crt <<- crt     
+    #setwd("~/dropbox/rh1/hidoe/csv")
+    #crt <- do.call(rbind,lapply(dir(), read.csv)) #read all classroom sensor data
+    #names(crt) <- c("RoomID", "SensorAlias", "StartTime", "Temp", "RH", "Ill")
+    #crt <- merge(crt[,c(1,2,3,4)], arch[,c("RoomID", "Alias", "Floor", "RoofColor", "SQFT", "Orientation", "Landscape", "Overhang", "School", "AC")], by="RoomID", all.x=TRUE)
+    #crt$SensorAlias <- as.character(crt$SensorAlias)
+    #crt <- crt[(substr(crt$SensorAlias,nchar(crt$SensorAlias)-1,nchar(crt$SensorAlias))!="HD"),] #remove non 15 minute intervals - keep for now but need to discuss how to resolve this (maybe smoothing)
+    #crt$Date <- as.Date(crt$StartTime, format="%m/%d/%y")
+    #crt$Time <- format(strptime(crt$StartTime, format="%m/%d/%y %H:%M"), format="%H:%M")
+    #crt$Month <- format(crt$Date, "%B") 
+    #crt <- merge(crt, sdates, by="Date", all.x=FALSE) #restrict to school days
+    #crt <- merge(crt, shours, by="Time", all.x=FALSE) #restrict to school hours
+    #crt$StartTime <- NULL
+    #crt <- crt[!is.na(crt$Temp),] #remove RH/illuminance observations
+    #crt <- crt[crt$AC!=1,] #remove classrooms with AC
+    #crt$AC <- NULL
+    #crt <<- crt     
     
-    ot <- read.csv(file="~/dropbox/rh1/hidoe/outdoor-csv.csv", sep=",") #outdoor temperature
-    names(ot) <- c("DateTime", "OutdoorTemp", "OutdoorUTCI")
-    ot$Date <- as.Date(ot$DateTime, format="%m/%d/%y")
-    ot$Time <- format(strptime(ot$DateTime, format="%m/%d/%y %H:%M"), format="%H:%M")
-    ot$DateTime <- NULL
-    ot$Month <- format(ot$Date, "%B")
-    ot <- merge(ot, sdates, by="Date", all.x=FALSE) #restrict to school days
-    ot <- merge(ot, shours, by="Time", all.x=FALSE) #restrict to school hours
+    #ot <- read.csv(file="~/dropbox/rh1/hidoe/outdoor-csv.csv", sep=",") #outdoor temperature
+    #names(ot) <- c("DateTime", "OutdoorTemp", "OutdoorUTCI")
+    #ot$Date <- as.Date(ot$DateTime, format="%m/%d/%y")
+    #ot$Time <- format(strptime(ot$DateTime, format="%m/%d/%y %H:%M"), format="%H:%M")
+    #ot$DateTime <- NULL
+    #ot$Month <- format(ot$Date, "%B")
+    #ot <- merge(ot, sdates, by="Date", all.x=FALSE) #restrict to school days
+    #ot <- merge(ot, shours, by="Time", all.x=FALSE) #restrict to school hours
+    #ot <<- ot
     
     
     #ot2013 <- ot[year(ot$Date)==2013,]
@@ -333,9 +334,10 @@
       facet_grid(~monthdisp, drop=FALSE) +
       scale_y_continuous(breaks=seq(70,100,5), limits=c(70,100)) +
       scale_x_datetime(breaks=date_breaks("2 hour"), labels=date_format("%H:%M"), limits=lims) +
-      scale_linetype_manual(name = "", labels = c("Average Outdoor Temperature", "Average Outdoor UTCI"), values=c("solid","dashed")) +
+      #scale_linetype_manual(name = "", labels = c("Average Outdoor Temperature", "Average Outdoor UTCI"), values=c("solid","dashed")) +
       ggtitle(bquote(atop(.(plot.title), atop(.(plot.subtitle), "")))) +
-      theme_fivethirtyeight() + theme(text=element_text(size=9)) + guides(color=FALSE)
+      #theme_fivethirtyeight() + theme(text=element_text(size=9)) + guides(color=FALSE)
+      theme_fivethirtyeight() + theme(text=element_text(size=9), legend.position="none")
     
     grid.arrange(l1,l2,l3, layout_matrix=rbind(c(1), c(2), c(3)))
     
