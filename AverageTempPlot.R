@@ -138,7 +138,7 @@ AverageTempPlot <- function(rlist, var, minTemp) {
     geom_text(data=maxDiffRows, aes(x, y, label=lab1, group=1), color="dimgrey", size=3, hjust="center") + 
     geom_text(data=maxDiffRows, aes(x, y2, label=paste("Maximum Difference:", lab2, "F", sep=" "), group=1), color="dimgrey", size=3, hjust="center") +
     theme_fivethirtyeight() + 
-    theme(text=element_text(size=9), legend.position=c(0.06,0.15), legend.background=element_rect(color="grey", fill="#F0F0F0", size=0.4, linetype="solid"), legend.title=element_blank()) 
+    theme(text=element_text(size=9), legend.position="none") 
   
 
   
