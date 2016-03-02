@@ -12,15 +12,15 @@ AverageTempPlot <- function(rlist, var, minTemp) {
   orderedMonths <- c("August", "September", "October", "November", "December", "January", "February", "March", "April", "May")
   colors <-c("#CC6666", "#9999CC", "#66CC99")
   
-  #crt <-read.csv(file="~/dropbox/rh1/hidoe/final-csv/all-classroom-sensor.csv", sep=",") #classroom
-  #crt$Date <- as.Date(crt$Date, format="%Y-%m-%d")
-  #crt$Time <- format(strptime(crt$Time, format="%H:%M"), format="%H:%M")
-  #crt$Month <- format(crt$Date, "%B") 
+  crt <-read.csv(file="~/dropbox/rh1/hidoe/final-csv/all-classroom-sensor.csv", sep=",") #classroom
+  crt$Date <- as.Date(crt$Date, format="%Y-%m-%d")
+  crt$Time <- format(strptime(crt$Time, format="%H:%M"), format="%H:%M")
+  crt$Month <- format(crt$Date, "%B") 
   
-  #ot <- read.csv(file="~/dropbox/rh1/hidoe/final-csv/all-outdoor-sensor.csv", sep=",") #outdoor 
-  #ot$Date <- as.Date(ot$Date, format="%Y-%m-%d")
-  #ot$Time <- format(strptime(ot$Time, format="%H:%M"), format="%H:%M")
-  #ot$Month <- format(ot$Date, "%B")
+  ot <- read.csv(file="~/dropbox/rh1/hidoe/final-csv/all-outdoor-sensor.csv", sep=",") #outdoor 
+  ot$Date <- as.Date(ot$Date, format="%Y-%m-%d")
+  ot$Time <- format(strptime(ot$Time, format="%H:%M"), format="%H:%M")
+  ot$Month <- format(ot$Date, "%B")
   
   otHot <- ot[ot$OutdoorUTCI>= as.numeric(minTemp),] #restrict to minimum outside temperature threshold 
 
@@ -72,11 +72,12 @@ AverageTempPlot <- function(rlist, var, minTemp) {
     geom_line(data=rooms[rooms$variable!="outavg",], aes(x=Time, y=value, color=variable)) +
     facet_wrap(~monthdisp, drop=FALSE, ncol=10) +
     scale_y_continuous(breaks=seq(60,110,5), limits=c(70,95)) +
-    scale_colour_manual(values=colors) +
+    scale_colour_manual(labels=rlist, values=colors) +
     scale_x_datetime(breaks=date_breaks("2 hour"), labels=date_format("%H:%M")) +
     ggtitle(bquote(atop(.(plot.title), atop(bold(.(sub)), .(plot1.subtitle),"")))) +
-    theme_fivethirtyeight() + 
-    theme(text=element_text(size=9), legend.position="none") 
+    theme_fivethirtyeight() +     
+    theme(text=element_text(size=9), legend.position=c(0.06,0.15), legend.background=element_rect(color="grey", fill="#F0F0F0", size=0.4, linetype="solid"), legend.title=element_blank()) 
+
 
   ### Average monthly temperature on school hour/days where outdoor temperature is above certain threshold
   oHot <- data.frame(ddply(otHot, c("Time", "Month"), summarise, outavg=mean(OutdoorUTCI)))
@@ -130,10 +131,12 @@ AverageTempPlot <- function(rlist, var, minTemp) {
     geom_line(data=roomsDiff[roomsDiff$variable=="OutdoorUTCI",], aes(x=Time, y=value), color="dimgrey", size=0.2) +
     geom_line(data=roomsDiff[roomsDiff$variable!="OutdoorUTCI",], aes(x=Time, y=value, color=variable)) +
     facet_wrap(~monthdisp, drop=FALSE, ncol=10) +
-    scale_y_continuous(breaks=seq(60,110,5), limits=c(65,95)) +
-    scale_colour_manual(labels=rlist, values=colors) +
+    scale_y_continuous(breaks=seq(60,110,5), limits=c(60,95)) +
+    scale_colour_manual(values=colors) +
     ggtitle(bquote(atop(.(plot.title), atop(.(plot3.subtitle), "")))) +
     scale_x_datetime(breaks=date_breaks("2 hour"), labels=date_format("%H:%M")) +
+    geom_text(data=maxDiffRows, aes(x, y, label=lab1, group=1), color="dimgrey", size=3, hjust="center") + 
+    geom_text(data=maxDiffRows, aes(x, y2, label=paste("Maximum Difference:", lab2, "F", sep=" "), group=1), color="dimgrey", size=3, hjust="center") +
     theme_fivethirtyeight() + 
     theme(text=element_text(size=9), legend.position=c(0.06,0.15), legend.background=element_rect(color="grey", fill="#F0F0F0", size=0.4, linetype="solid"), legend.title=element_blank()) 
   
