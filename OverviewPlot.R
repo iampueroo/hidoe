@@ -102,9 +102,6 @@
     
     cro.daily <- melt(cro.daily, id.vars=c("Date", "Alias", "School"))
     
-    colors <- c("#FC4F30", "#30A2DA")
-    
-    #try splitting datasets for  legends
     
     p <- ggplot() +
       geom_hline(yintercept=minTemp, linetype="dotted", color="black", size=0.5) + 
@@ -121,11 +118,12 @@
     
       scale_linetype_manual(name="", labels=c("Temperature", "Universal Thermal Climate Index"), values=c("dashed","solid")) +
       scale_colour_manual(name = "", labels=c("Classroom Average (UTCI)", "Classroom Maximum (UTCI)"), values=colors) +   
-      scale_size_manual(name="", values=rep(c(0.5,0.8), times=3), guide="none") +
+      scale_size_manual(name="", labels=c("Outdoor", ""), values=c(0.5,0.8)) +
       theme_fivethirtyeight() +
-      theme(text=element_text(size=9), legend.title=element_blank(), legend.position="bottom") +
-      guides(linetype = guide_legend(override.aes = list(fill=NA, size=0.5)), color = guide_legend(override.aes = list(fill=NA, alpha=0.8, size=1.5, linetype=0)))
-    
+      theme(text=element_text(size=9), legend.title=element_blank(), legend.position=c(0.2,0.08), legend.background=element_rect(color="grey", fill="#F0F0F0", size=0.4, linetype="solid"), legend.box="horizontal") +
+      guides(color = guide_legend(override.aes = list(fill=NA, alpha=0.8, size=1.5, linetype=0)), linetype = guide_legend(override.aes = list(fill=NA, size=0.5, order=1)),  size = guide_legend(override.aes = list(color=c("dimgrey",NA), size=0.8)))
+      
+
     
 
       
