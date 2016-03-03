@@ -173,6 +173,7 @@
     cr.daily$monthdisp <- factor(cr.daily$Month, orderedMonths)
     cr.daily$School <- sub("(.*?) - .*", "\\1", cr.daily$Alias)
     cr.daily$Room <- sub(".*- ", "", cr.daily$Alias)
+    cr.daily$Room <- ifelse(cr.daily$Alias=="Campbell - N (Robotics)", "N", cr.daily$Room)
     cr.daily$Hot <- ifelse(cr.daily$AvgHotHours>4, "Red", ifelse(cr.daily$AvgHotHours>2, "Orange", "Yellow"))
     
     ann <- o.daily
@@ -193,7 +194,6 @@
       scale_y_continuous(breaks=seq(0,6,1), limits=c(0,6.15)) +
       ggtitle(bquote(atop(.(plot.title), atop(.(plot.subtitle), "")))) +
       theme_fivethirtyeight() +
-      #theme(legend.position="none", text=element_text(size=9), axis.text.x=element_blank())
       theme(legend.position="none", text=element_text(size=9), axis.text.x=element_text(angle=90, hjust=1))
     
     grid.arrange(b1,b2,b3, layout_matrix=rbind(c(1), c(2), c(3)))
