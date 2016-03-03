@@ -98,6 +98,8 @@
     cr.daily$AvgHotHours <- with(cr.daily, round(AvgHotHours,2))
     cr.daily$monthdisp <- factor(cr.daily$Month, orderedMonths)
     cr.daily$School <- sub("(.*?) - .*", "\\1", cr.daily$Alias)
+    cr.daily$Room <- sub(".*- ", "", cr.daily$Alias)
+    cr.daily$Room <- ifelse(cr.daily$Alias=="Campbell - N (Robotics)", "N", cr.daily$Room)
     cr.daily$Hot <- ifelse(cr.daily$AvgHotHours>4, "Red", ifelse(cr.daily$AvgHotHours>2, "Orange", "Yellow"))
     
     ann <- o.daily
@@ -111,7 +113,7 @@
     plot.subtitle <- "School Hours Above 85°F UTCI, All Days"
     
     b1 <- ggplot() + 
-      geom_bar(data=cr.daily[cr.daily$School==school,], aes(x=Alias, y=AvgHotHours, fill=Hot), alpha=0.5, stat="identity") + 
+      geom_bar(data=cr.daily[cr.daily$School==school,], aes(x=Room, y=AvgHotHours, fill=Hot), alpha=0.5, stat="identity") + 
       geom_hline(data=o.daily, aes(yintercept=AvgHotHours), color="dimgrey", size=0.3) +
       geom_text(data=ann, aes(x, y, label=lab, group=1), color="dimgrey", size=2.5, hjust="left") + 
       facet_grid(~monthdisp, drop=FALSE) +
@@ -119,7 +121,7 @@
       scale_y_continuous(breaks=seq(0,6,1), limits=c(0,6.15)) +
       ggtitle(bquote(atop(.(plot.title), atop(.(plot.subtitle), "")))) +
       theme_fivethirtyeight() +
-      theme(axis.text.x = element_blank(), legend.position="none",  text=element_text(size=9))
+      theme(legend.position="none", text=element_text(size=9), axis.text.x=element_text(angle=90, hjust=1))
     
     ## Reaching 85
     hot <- ddply(cro, c("Date"), summarize, Hot=sum(OutGE85, na.rm=TRUE)) 
@@ -136,6 +138,8 @@
     cr.daily$AvgHotHours <- with(cr.daily, round(AvgHotHours,2))
     cr.daily$monthdisp <- factor(cr.daily$Month, orderedMonths)
     cr.daily$School <- sub("(.*?) - .*", "\\1", cr.daily$Alias)
+    cr.daily$Room <- sub(".*- ", "", cr.daily$Alias)
+    cr.daily$Room <- ifelse(cr.daily$Alias=="Campbell - N (Robotics)", "N", cr.daily$Room)
     cr.daily$Hot <- ifelse(cr.daily$AvgHotHours>4, "Red", ifelse(cr.daily$AvgHotHours>2, "Orange", "Yellow"))
     
     ann <- o.daily
@@ -149,7 +153,7 @@
     plot.subtitle <- "School Hours Above 85°F UTCI, Days Reaching 85°F"
     
     b2 <- ggplot() + 
-      geom_bar(data=cr.daily[cr.daily$School==school,], aes(x=Alias, y=AvgHotHours, fill=Hot), alpha=0.5, stat="identity") + 
+      geom_bar(data=cr.daily[cr.daily$School==school,], aes(x=Room, y=AvgHotHours, fill=Hot), alpha=0.5, stat="identity") + 
       geom_hline(data=o.daily, aes(yintercept=AvgHotHours), color="dimgrey", size=0.3) +
       geom_text(data=ann, aes(x, y, label=lab, group=1), color="dimgrey", size=2.5, hjust="left") + 
       facet_grid(~monthdisp, drop=FALSE) +
@@ -157,7 +161,7 @@
       scale_y_continuous(breaks=seq(0,6,1), limits=c(0,6.15)) +
       ggtitle(bquote(atop(.(plot.title), atop(.(plot.subtitle), "")))) +
       theme_fivethirtyeight() +
-      theme(axis.text.x = element_blank(), legend.position="none",  text=element_text(size=9))
+      theme(legend.position="none", text=element_text(size=9), axis.text.x=element_text(angle=90, hjust=1))
     
     ## Hottest day
     croMax <- merge(cro, hottest, by=c("Date","Month"))
