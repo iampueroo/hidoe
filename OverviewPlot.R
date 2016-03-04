@@ -19,12 +19,15 @@
     if (school=="Kaimiloa") {
       schoolTitle <- "Kaimiloa Elementary School"
       ann.size <- 10
+      schoolSave <- "kaimiloa"
     } else if (school=="Campbell") {
       schoolTitle <- "James Campbell High School"
       ann.size <- 30
+      schoolSave <- "campbell"
     } else if (school=="Ilima") {
       schoolTitle <- "Ilima Intermediate School"
       ann.size <- 12
+      schoolSave <- "ilima"
     }
     
     ### Input data 
@@ -74,7 +77,7 @@
       scale_x_date(date_breaks="1 month", date_labels="%b '%y") + 
       ggtitle(paste(" Daily Universal Thermal Climate Index (UTCI) Profile: ", schoolTitle)) +
       theme_fivethirtyeight() +
-      theme(text=element_text(size=9), legend.title=element_blank(), legend.position=c(0.148,0.08), legend.background=element_rect(color="grey", fill="#F0F0F0", size=0.4, linetype="solid"), legend.box="horizontal") +
+      theme(text=element_text(size=9), legend.title=element_blank(), legend.position=c(0.15,0.08), legend.background=element_rect(color="grey", fill="#F0F0F0", size=0.4, linetype="solid"), legend.box="horizontal") +
       guides(color = guide_legend(override.aes = list(size=c(0.8,0.5,0.5,0.8,0.5,0.8), linetype=c(1,2,2,1,2,1), shape=NA)),
              shape = guide_legend(ncol=1, override.aes = list(alpha=c(0.6,0.6), color=c("#30A2DA", "#FC4F30"))))
     
@@ -200,8 +203,7 @@
       theme_fivethirtyeight() +
       theme(legend.position="none", text=element_text(size=9), axis.text.x=element_text(angle=90, hjust=1))
     
-    grid.arrange(b1,b2,b3, layout_matrix=rbind(c(1), c(2), c(3)))
-    
+    b <- arrangeGrob(b1,b2,b3, layout_matrix=rbind(c(1), c(2), c(3)))
     
     ### Line
     ## All days
@@ -303,7 +305,26 @@
                                       legend.position=c(0.08,0.15), 
                                       legend.background=element_rect(color="grey", fill="#F0F0F0", size=0.4, linetype="solid"), legend.box="horizontal") 
     
-    grid.arrange(l1,l2,l3, layout_matrix=rbind(c(1), c(2), c(3)))
+    l <- arrangeGrob(l1,l2,l3, layout_matrix=rbind(c(1), c(2), c(3)))
+    
+    ### Print plots
+    #error <- TRUE
+    #while (error) {
+    #  e <- try(grid.arrange(b1,b2,b3, layout_matrix=rbind(c(1), c(2), c(3))))
+    #  if ("try-error" %in% class(e)) {error <- TRUE}
+    #  else {error <- FALSE}
+    #}
+    #error <- TRUE
+    #while (error) {
+    #  e <- try(grid.arrange(l1,l2,l3, layout_matrix=rbind(c(1), c(2), c(3))))
+    #  if ("try-error" %in% class(e)) {error <- TRUE}
+    #  else {error <- FALSE}
+    #}
+    
+  
+    ggsave(filename=paste0("~/dropbox/rh1/hidoe/plots/avg-daily-",schoolSave,".pdf"), p, width=25, height=16, units="in")
+    ggsave(filename=paste0("~/dropbox/rh1/hidoe/plots/avg-hourly-",schoolSave,".pdf"), l, width=25, height=16, units="in")
+    ggsave(filename=paste0("~/dropbox/rh1/hidoe/plots/hours-above-",schoolSave,".pdf"), b, width=25, height=16, units="in")
     
   }    
   
