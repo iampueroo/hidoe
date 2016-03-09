@@ -1,16 +1,22 @@
-TemperatureToUTCI <- function(df, tempVar, rhVar, windVar) {
+TemperatureToUTCI <- function(df, tempVar, tempVarUnits, rhVar, windVar, windVarUnits) {
   ### Convert temperature F to UTCI F
   
   library(plyr)
-  
-  tf <- df[,tempVar]
+
+  t <- df[,tempVar]
   rh <- df[,rhVar]
-  wmh <- df[,windVar]
-  tempdata <- data.frame(cbind(tf, rh, wmh))
+  ws <- df[,windVar]
+  tempdata <- data.frame(cbind(t, rh, ws))
+  
+  if (tempVarUnits=="f") { tempdata <- mutate(tempdata, tc=(t-32)*(5/9)) }
+  else { 
+    df <- mutate(df, Temp_F=(t*(9/5)+32))
+    tempdata$tc <- tempdata$t 
+  }
+  if (windVarUnits=="mi/hr") { tempdata <- mutate(tempdata, w=ws*0.44704) } 
+  else { tempdata$w <- tempdata$ws }
   
   
-  tempdata <- mutate(tempdata, tc=(tf-32)*(5/9))
-  tempdata <- mutate(tempdata, w=wmh*0.44704)
   tempdata <- mutate(tempdata, rhd=rh/100)
   tempdata <- mutate(tempdata, vp=6.11 * 10^ ((7.5 * tc) / (237.3 + tc)) * rhd / 10)
   tempdata <- mutate(tempdata, f1=tc +
@@ -224,7 +230,8 @@ TemperatureToUTCI <- function(df, tempVar, rhVar, windVar) {
                   (0.00104452989) * w * vp * vp * vp * vp * vp +
                   (2.47090539 * 10^(-4)) * 0 * vp * vp * vp * vp * vp +
                   (0.00148348065) * vp * vp * vp * vp * vp * vp)
-  tempdata <- mutate(tempdata, utci=(f1+f2+f3+f4+f5+f6+f7+f8+f9)*(9/5)+32)   
-  df$UTCI_F <- tempdata$utci
+  tempdata <- mutate(tempdata, utcif=(f1+f2+f3+f4+f5+f6+f7+f8+f9)*(9/5)+32)   
+  tempdata <- mutate(tempdata, utci=(f1+f2+f3+f4+f5+f6+f7+f8+f9))   
+  df$UTCI_F <- tempdata$utcif
   return(df)
 }
