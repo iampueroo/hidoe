@@ -231,7 +231,6 @@ TemperatureToUTCI <- function(df, tempVar, tempVarUnits, rhVar, windVar, windVar
                   (2.47090539 * 10^(-4)) * 0 * vp * vp * vp * vp * vp +
                   (0.00148348065) * vp * vp * vp * vp * vp * vp)
   tempdata <- mutate(tempdata, utcif=(f1+f2+f3+f4+f5+f6+f7+f8+f9)*(9/5)+32)   
-  tempdata <- mutate(tempdata, utci=(f1+f2+f3+f4+f5+f6+f7+f8+f9))   
   df$UTCI_F <- tempdata$utcif
   return(df)
 }
