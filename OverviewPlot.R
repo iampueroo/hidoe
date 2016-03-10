@@ -36,12 +36,14 @@
     o$Time <- format(strptime(o$Time, format="%H:%M"), format="%H:%M")
     o$Month <- factor(format(o$Date, "%B"), orderedMonths)
     o$Alias <- NULL #choose what weather station you want from Alias, but for now they're all the same so drop Alias
+    o <- o[o$SchoolDate==1 & o$SchoolHour==1,]
     
     cr <-read.csv(file="~/dropbox/rh1/hidoe/output-csv/classroom-master.csv", sep=",") #classroom
     cr$Date <- as.Date(cr$Date, format="%Y-%m-%d")
     cr$Time <- format(strptime(cr$Time, format="%H:%M"), format="%H:%M")
     cr$Month <- format(cr$Date, "%B") 
     cr$Month <- factor(format(cr$Date, "%B"), orderedMonths)
+    cr <- cr[cr$SchoolDate==1 & cr$SchoolHour==1,]
     
     arch <- read.csv(file="~/dropbox/rh1/hidoe/input-csv/classroom-features.csv", sep=",") #classroom architectural data
     archKeepVars <- c("RoomID", "Alias", "School", "AC")
@@ -79,7 +81,7 @@
       geom_point(data=daily.melt[daily.melt$School==school & daily.melt$variable %in% c("AvgRoomUTCI", "MaxRoomUTCI"),], aes(x=Date, y=value, color=variable, shape=level), alpha=0.2) +
       geom_smooth(data=daily.melt[daily.melt$Alias %in% c(school, "Outdoor"),], aes(x=Date, y=value, linetype=variable, size=variable, color=variable), fill=NA, span=0.4) +
       scale_color_manual(name = "", values=c("dimgrey", "dimgrey", "#30A2DA", "#30A2DA", "#30A2DA", "#FC4F30", "#FC4F30", "#FC4F30"), guide=FALSE) +   
-      scale_linetype_manual(name="", labels=c("Avg Outdoor UTCI", "Avg Outdoor Temp", "Avg Classroom Temp", "Max Classroom Temp", "Avg Classroom UTCI", "Max Classroom UTCI"), values=c("dashed","solid", "dashed", "dashed", "solid", "solid")) +
+      scale_linetype_manual(name="", labels=c("Avg Outdoor UTCI", "Avg Outdoor Temp", "Avg School Temp", "Max School Temp", "Avg School UTCI", "Max School UTCI"), values=c("dashed","solid", "dashed", "dashed", "solid", "solid")) +
       scale_size_manual(name="", values=c(0.5, 0.8, 0.5, 0.5, 0.8, 0.8), guide=FALSE) +
       scale_shape_manual(name="", labels=c("Classroom (Average UTCI)", "Classroom (Maxmimum UTCI)"), values=c(16, 16)) +
       scale_y_continuous(breaks=seq(70,105,5), limits = c(70,105)) + 
