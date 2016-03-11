@@ -6,8 +6,6 @@ classroom-plot <- function(classroom, weatherstation, startdate, enddate) {
   library(scales)
   library(grid)
   library(gridExtra) 
-  #library(gtable)
-  #library(lubridate) 
   
   min_F <- 85
   colors <- c( "dimgrey", "#FC4F30", "#30A2DA")
@@ -29,6 +27,9 @@ classroom-plot <- function(classroom, weatherstation, startdate, enddate) {
   cr$Time <- format(strptime(cr$Time, format="%H:%M"), format="%H:%M")
   cr$Month <- factor(format(cr$Date, "%B"), c("August", "September", "October", "November", "December", "January", "February", "March", "April", "May", "June", "July"))
   cr <- merge(cr, arch[,c("RoomID", "Alias")], by="RoomID", all.x=TRUE) #get room alias 
+  cr$SensorAlias <- as.character(cr$SensorAlias)
+  cr <- cr[substr(ct$SensorAlias,nchar(cr$SensorAlias)-1,nchar(cr$SensorAlias))!="HD",] 
+  
   cr <- cr[cr$Alias==classroom,] #restrict to classroom specified
 
   # raw data plots -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
