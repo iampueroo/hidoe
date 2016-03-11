@@ -68,7 +68,7 @@ classroom-plot <- function(classroom, weatherstation, startdate, enddate) {
   u <- ggplot() +
       geom_hline(yintercept=min_F, linetype="dotted", color="black", size=0.5) + 
       geom_point(data=cr.daily[cr.daily$variable %in% c("AvgRoomUTCI", "MaxRoomUTCI"),], aes(x=Date, y=value, color=variable, shape=level), alpha=0.5) +
-      geom_smooth(data=cro.daily, aes(x=Date, y=value, linetype=variable, size=variable, color=variable), fill=NA) +
+      geom_smooth(data=cro.daily, aes(x=Date, y=value, linetype=variable, size=variable, color=variable), fill=NA, span=0.4) +
       scale_color_manual(name = "", values=c("dimgrey", "dimgrey", "#30A2DA", "#30A2DA", "#FC4F30", "#FC4F30"), guide=FALSE) +   
       scale_linetype_manual(name="", labels=c("Average Outdoor Temperature", "Average Outdoor UTCI", "Average Classroom Temperature", "Maximum Classroom Temperature", "Average Classroom UTCI", "Maximum Classroom UTCI"), values=c("dashed","solid", "dashed", "dashed", "solid", "solid")) +
       scale_size_manual(name="", values=c(0.5, 0.8, 0.5, 0.5, 0.8, 0.8), guide=FALSE) +
