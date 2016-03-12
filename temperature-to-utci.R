@@ -1,7 +1,7 @@
 temp2utci <- function(df, tempVar, tempVarUnits, rhVar, windVar, windVarUnits) {
   ### Convert temperature F to UTCI F
   
-  library(dplyr)
+  library(plyr)
 
   t <- df[,tempVar]
   rh <- df[,rhVar]
