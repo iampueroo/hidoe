@@ -29,8 +29,6 @@ classroom-comparison <- function(classroom1, startdate1, enddate1, classroom2, s
   cr$Time <- format(strptime(cr$Time, format="%H:%M"), format="%H:%M")
   cr$Month <- factor(format(cr$Date, "%B"), c("August", "September", "October", "November", "December", "January", "February", "March", "April", "May", "June", "July"))
   cr <- merge(cr, arch[,c("RoomID", "Alias")], by="RoomID", all.x=TRUE) #get room alias 
-  cr$SensorAlias <- as.character(cr$SensorAlias)
-  cr <- cr[substr(cr$SensorAlias,nchar(cr$SensorAlias)-1,nchar(cr$SensorAlias))!="HD",]  #remove duplicate datetime...figure out why different
   cr1 <- cr[cr$Alias==classroom1,] #restrict to classroom specified
   cr2 <- cr[cr$Alias==classroom2,] #restrict to classroom specified
   
@@ -101,7 +99,7 @@ classroom-comparison <- function(classroom1, startdate1, enddate1, classroom2, s
     theme_fivethirtyeight() + theme(legend.position="none", text=element_text(size=9))
   
   ## Obs over 85 - doesn't work!!
-  #oHot <- o[o$UTCI>=min_F, c("Date", "Time", "Month", "HST")]
+  oHot <- o[o$UTCI>=min_F, c("Date", "Time", "Month", "HST")]
   
   
   ## Hottest day

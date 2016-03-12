@@ -50,10 +50,6 @@
     cr <- merge(cr, arch[,c(archKeepVars)], by="RoomID", all.x=TRUE, all.y=TRUE)
     cr <- cr[cr$AC==0,]
     cr$AC <- NULL
-    cr$SensorAlias <- as.character(cr$SensorAlias)
-    cr <- cr[substr(cr$SensorAlias,nchar(cr$SensorAlias)-1,nchar(cr$SensorAlias))!="HD",] #remove HD (because of overlapping)
-    cr$SensorAlias <- NULL
-    
     
     hottest <- do.call("rbind", by(o, o$Month, function(x) x[which.max(x$UTCI_F),]))
     hottest <- hottest[,c("Date", "Month")]
