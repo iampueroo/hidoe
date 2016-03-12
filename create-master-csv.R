@@ -17,9 +17,10 @@ createmastercsv <- function() {
   setwd("~/dropbox/rh1/hidoe/input-csv/classroom/13.07.20 - 14.10.20") 
   cr <- do.call(rbind,lapply(dir(), read.csv)) #read all classroom sensor data
   names(cr) <- c("RoomID", "SensorAlias", "StartTime", "Temp_F", "RH", "Ill")
-  cr.temp <- cr[!is.na(cr$Temp_F),c("RoomID", "StartTime", "Temp_F", "SensorAlias")] #pull out temp 
   cr$SensorAlias <- as.character(cr$SensorAlias)
   cr <- cr[substr(cr$SensorAlias,nchar(cr$SensorAlias)-1,nchar(cr$SensorAlias))!="HD",] 
+  cr$SensorAlias <- NULL
+  cr.temp <- cr[!is.na(cr$Temp_F),c("RoomID", "StartTime", "Temp_F")] #pull out temp 
   cr.rh<- cr[!is.na(cr$RH),c("RoomID", "StartTime", "RH")] #pull out RH
   cr <- merge(cr.temp, cr.rh, by=c("RoomID", "StartTime")) #merge back together to compress data frame
   cr$RoomWind <- 0
