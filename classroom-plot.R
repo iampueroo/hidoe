@@ -1,4 +1,4 @@
-classroom-plot <- function(classroom, weatherstation, startdate, enddate) {
+classroomplot <- function(classroom, weatherstation, startdate, enddate) {
   library(plyr)
   library(reshape2)
   library(ggplot2)
@@ -52,6 +52,8 @@ classroom-plot <- function(classroom, weatherstation, startdate, enddate) {
   # restrict to school hour/dates ------------------------------------------------------------------------------------------------------------------------------------------------------------------
   cr <- cr[cr$SchoolDate==1 & cr$SchoolHour==1,]
   o <- o[o$SchoolDate==1 & o$SchoolHour==1,]
+  cr$Month <- factor(format(cr$Date, "%B"), c("August", "September", "October", "November", "December", "January", "February", "March", "April", "May"))
+  o$Month <- factor(format(o$Date, "%B"), c("August", "September", "October", "November", "December", "January", "February", "March", "April", "May"))
   
   o.daily <- ddply(o,c("Date"), summarise, AvgOutdoorTemp=mean(Temp_F, na.rm=TRUE), AvgOutdoorUTCI=mean(UTCI_F, na.rm=TRUE)) #aggregated by date 
   cr.daily <- ddply(cr, c("Date"), summarise, AvgRoomTemp=mean(Temp_F, na.rm=TRUE), MaxRoomTemp=max(Temp_F,na.rm=TRUE), AvgRoomUTCI=mean(UTCI_F, na.rm=TRUE), MaxRoomUTCI=max(UTCI_F, na.rm=TRUE)) #aggregated  by date
@@ -80,10 +82,17 @@ classroom-plot <- function(classroom, weatherstation, startdate, enddate) {
             shape = guide_legend(ncol=1, override.aes = list(alpha=c(0.6,0.6), color=c("#30A2DA", "#FC4F30"))))
   
    ### line plots ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+   # get closest regular interval time to merge with 
+   reg <- data.frame(DateTime=seq(from=as.POSIXct(paste(stdt, "08:00")), by=15*60, to=as.POSIXct(paste(endt, "14:00"))))
+   o$closestDateTime <- reg$DateTime[ findInterval(o$DateTime, c(-Inf, head(reg$DateTime,-1)) + c(0, diff(as.numeric(reg$DateTime))/2 )) ]
+   oreg <- o[,c("Temp_F", "UTCI_F", "Alias", "closestDateTime")]
+   oreg$Date <- as.Date(oreg$closestDateTime, format="%Y-%m-%d")
+   oreg$Time <- format(strptime(oreg$closestDateTime, format="%Y-%m-%d %H:%M:%S"), format="%H:%M")
+   oreg$Month <- factor(format(oreg$Date, "%B"), c("August", "September", "October", "November", "December", "January", "February", "March", "April", "May", "June", "July"))
    
    ## All days
    cr.hourly <- ddply(cr, c("Time", "Month"), summarize, AvgUTCI=mean(UTCI_F, na.rm=TRUE))
-   o.hourly <- ddply(o, c("Time", "Month"), summarize, AvgTemp=mean(Temp_F, na.rm=TRUE), AvgUTCI=mean(UTCI_F, na.rm=TRUE))
+   o.hourly <- ddply(oreg, c("Time", "Month"), summarize, AvgTemp=mean(Temp_F, na.rm=TRUE), AvgUTCI=mean(UTCI_F, na.rm=TRUE))
    
    cr.hourly <- melt(cr.hourly, id.vars=c("Time", "Month"))
    o.hourly <- melt(o.hourly, id.vars=c("Time", "Month"))
@@ -97,8 +106,8 @@ classroom-plot <- function(classroom, weatherstation, startdate, enddate) {
    l1 <- ggplot() + 
      geom_hline(yintercept=min_F, linetype="dotted", color="black", size=0.5) +
      geom_line(data=cr.hourly, aes(x=Time, y=value), size=0.8, alpha=0.5, group=1, color="forestgreen") +
-     geom_smooth(data=o.hourly, aes(x=Time, y=value, linetype=variable, size=variable, group=variable), color="dimgrey", fill=NA, span=0.2) +
-     facet_grid(~Month) +
+     geom_line(data=o.hourly, aes(x=Time, y=value, linetype=variable, size=variable, group=variable), color="dimgrey") +
+     facet_grid(~Month, drop=FALSE) +
      scale_y_continuous(breaks=seq(70,100,5), limits=c(70,100)) +
      scale_x_datetime(breaks=date_breaks("2 hour"), labels=date_format("%H:%M"), limits=lims) +
      scale_size_manual(name="", values=c(0.5,0.8)) +
@@ -107,16 +116,12 @@ classroom-plot <- function(classroom, weatherstation, startdate, enddate) {
      theme_fivethirtyeight() + theme(legend.position="none", text=element_text(size=9))
    
    ## Obs over 85 - doesn't work!!
-   hot <- o[o$UTCI_F>=min_F, c("Date", "Time", "Month")]
-   reg <- data.frame(DateTime=seq(from=as.POSIXct(paste(stdt, "08:00")), by=15*60, to=as.POSIXct(paste(endt, "14:00"))))
+   hot <- oreg[oreg$UTCI_F>=min_F, c("Date", "Time", "Month")]
    
-   o$closestDateTime <- reg$DateTime[ findInterval(o$DateTime, c(-Inf, head(reg$DateTime,-1)) + c(0, diff(as.numeric(reg$DateTime))/2 )) ]
-   
-   ohot <- merge(o, hot, by=c("Date", "Time", "Month")) #get hot obs using closest time match
+   ohot <- merge(oreg, hot, by=c("Date", "Time", "Month")) #get hot obs using closest time match
    crhot <- cr[cr$DateTime %in% ohot$closestDateTime, ]
   
    cr.hourly <- ddply(crhot, c("Time", "Month"), summarize, AvgUTCI=mean(UTCI_F, na.rm=TRUE))
-   ohot$Time <- format(strptime(ohot$closestDateTime, format="%Y-%m-%d %H:%M:%S"), format="%H:%M")
    o.hourly <- ddply(ohot, c("Time", "Month"), summarize, AvgTemp=mean(Temp_F, na.rm=TRUE), AvgUTCI=mean(UTCI_F, na.rm=TRUE))
    
    o.hourly$Time <- as.POSIXct(o.hourly$Time, format="%H:%M", tz="UTC")
@@ -142,7 +147,7 @@ classroom-plot <- function(classroom, weatherstation, startdate, enddate) {
    l2 <- ggplot() + 
      geom_hline(yintercept=min_F, linetype="dotted", color="black", size=0.5) +
      geom_line(data=cr.hourly, aes(x=Time, y=value), size=0.8, alpha=0.5, group=1, color="forestgreen") +
-     geom_smooth(data=o.hourly, aes(x=Time, y=value, linetype=variable, size=variable, group=variable), color="dimgrey", fill=NA, span=0.2) +
+     geom_line(data=o.hourly, aes(x=Time, y=value, linetype=variable, size=variable, group=variable), color="dimgrey") +
      facet_grid(~Month, drop=FALSE) +
      scale_linetype_manual(name = "", values=c("longdash","solid")) +
      scale_y_continuous(breaks=seq(70,100,5), limits=c(70,100)) +
@@ -153,14 +158,16 @@ classroom-plot <- function(classroom, weatherstation, startdate, enddate) {
    
   
    ## Hottest day
-   hottest <- do.call("rbind", by(o, o$Month, function(x) x[which.max(x$UTCI_F),c("Month", "Date")]))
+   hottest <- do.call("rbind", by(oreg, oreg$Month, function(x) x[which.max(x$UTCI_F),c("Month", "Date")]))
    
-   cr.hourly <- merge(cr, hottest, by=c("Date","Month"))
-   o.hourly <- merge(o, hottest, by=c("Date","Month"))
+   crhottest <- merge(cr, hottest, by=c("Date","Month"))
+   ohottest <- merge(oreg, hottest, by=c("Date","Month"))
    
-   o.hourly$SchoolDate <- NULL
-   o.hourly$SchoolHour <- NULL
-   o.hourly <- melt(o.hourly, id.vars=c("Date", "Month", "Time"))
+   cr.hourly <- ddply(crhottest, c("Time", "Month"), summarize, AvgUTCI=mean(UTCI_F, na.rm=TRUE))
+   o.hourly <- ddply(ohottest, c("Time", "Month"), summarize, AvgTemp=mean(Temp_F, na.rm=TRUE), AvgUTCI=mean(UTCI_F, na.rm=TRUE))
+   
+   cr.hourly <- melt(cr.hourly, id.vars=c("Time", "Month"))
+   o.hourly <- melt(o.hourly, id.vars=c("Time", "Month"))
    o.hourly$Time <- as.POSIXct(o.hourly$Time, format="%H:%M", tz="UTC")
    cr.hourly$Time <- as.POSIXct(cr.hourly$Time, format="%H:%M", tz="UTC")
    
@@ -169,24 +176,25 @@ classroom-plot <- function(classroom, weatherstation, startdate, enddate) {
    
    l3 <- ggplot() + 
      geom_hline(yintercept=min_F, linetype="dotted", color="black", size=0.5) +
-     geom_line(data=cr.hourly, aes(x=Time, y=UTCI_F), size=0.8, alpha=0.5, group=1, color="forestgreen") +
+     geom_line(data=cr.hourly, aes(x=Time, y=value, color=variable), size=0.8, alpha=0.5, group=1) +
      geom_line(data=o.hourly, aes(x=Time, y=value, linetype=variable, size=variable, group=variable), color="dimgrey") +
      facet_grid(~Month, drop=FALSE) +
      scale_y_continuous(breaks=seq(70,100,5), limits=c(70,100)) +
-     scale_color_manual(values=palette(ann.size)) +
+     scale_color_manual(name="", labels=c(classroom), values=c("forestgreen")) +
      scale_size_manual(name="", values=c(0.5,0.8), guide=FALSE) +
      scale_linetype_manual(name = "", labels=c("Outdoor Temperature", "Outdoor UTCI"), values=c("longdash","solid")) +
      scale_x_datetime(breaks=date_breaks("2 hour"), labels=date_format("%H:%M"), limits=lims) +
      ggtitle(bquote(atop(.(plot.title), atop(.(plot.subtitle), "")))) +
      theme_fivethirtyeight() + theme(text=element_text(size=9),
                                      legend.title=element_blank(),
-                                     legend.position=c(0.08,0.15), 
+                                     legend.position=c(0.09,0.12), 
                                      legend.background=element_rect(color="grey", fill="#F0F0F0", size=0.4, linetype="solid"), legend.box="horizontal") +
      guides(linetype = guide_legend(override.aes = list(size=0.5)))        
    
    
    
-   l <- arrangeGrob(l1,l3, layout_matrix=rbind(c(1), c(2)))
+   l <- arrangeGrob(l1,l2,l3, layout_matrix=rbind(c(1), c(2), c(3)))
+   ggsave(filename=paste0("~/dropbox/rh1/hidoe/plots/",classroom,".pdf"), l, width=25, height=16, units="in")
    
   
   
