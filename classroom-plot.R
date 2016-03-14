@@ -6,6 +6,7 @@ classroom-plot <- function(classroom, weatherstation, startdate, enddate) {
   library(scales)
   library(grid)
   library(gridExtra) 
+  library(data.table)
   
   min_F <- 85
   colors <- c( "dimgrey", "#FC4F30", "#30A2DA")
@@ -17,37 +18,35 @@ classroom-plot <- function(classroom, weatherstation, startdate, enddate) {
   arch <- read.csv(file="~/dropbox/rh1/hidoe/input-csv/classroom-features.csv", sep=",") #classroom architectural data
   
   o <- read.csv(file="~/dropbox/rh1/hidoe/output-csv/outdoor-master.csv", sep=",") #outdoor 
+  o <- o[o$Alias==weatherstation,]
   o$Date <- as.Date(o$Date, format="%Y-%m-%d")
   o$Time <- format(strptime(o$Time, format="%H:%M"), format="%H:%M")
   o$Month <- factor(format(o$Date, "%B"), c("August", "September", "October", "November", "December", "January", "February", "March", "April", "May", "June", "July"))
-  o$Alias <- NULL #choose what weather station you want from Alias, but for now they're all the same so drop Alias
   o <- o[o$Date >= stdt & o$Date <= endt, ]
   
   cr <-read.csv(file="~/dropbox/rh1/hidoe/output-csv/classroom-master.csv", sep=",") #classroom
+  cr <- merge(cr, arch[,c("RoomID", "Alias")], by="RoomID", all.x=TRUE) #get room alias 
+  cr <- cr[cr$Alias==classroom,] #restrict to classroom specified
   cr$Date <- as.Date(cr$Date, format="%Y-%m-%d")
   cr$Time <- format(strptime(cr$Time, format="%H:%M"), format="%H:%M")
   cr$Month <- factor(format(cr$Date, "%B"), c("August", "September", "October", "November", "December", "January", "February", "March", "April", "May", "June", "July"))
-  cr <- merge(cr, arch[,c("RoomID", "Alias")], by="RoomID", all.x=TRUE) #get room alias 
-  cr <- cr[cr$Alias==classroom,] #restrict to classroom specified
   cr <- cr[cr$Date >= stdt & cr$Date <= endt, ]
   
   # raw data plots -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-  cro <- merge(o[, c("Temp_F", "UTCI_F", "Date", "Time", "Month")], cr[, c("Temp_F", "UTCI_F", "Date", "Time", "Month", "Alias")], by=c("Time", "Date", "Month"), suffixes=c("_O", "_CR"), all.y=TRUE)
-  cro.melt <- melt(cro, id.vars=c("Time", "Date", "Month", "Alias"))
-  cro.melt$DateTime <- as.POSIXct(paste(cro.melt$Date, cro.melt$Time), format="%Y-%m-%d %H:%M")
-  
+  o$DateTime <- as.POSIXct(paste(o$Date, o$Time), format="%Y-%m-%d %H:%M")
+  cr$DateTime <- as.POSIXct(paste(cr$Date, cr$Time), format="%Y-%m-%d %H:%M")
   
   t <- ggplot() + 
       geom_hline(yintercept=85, color="black", linetype="dotted", size=0.5) +
-      geom_line(data=cro.melt[cro.melt$variable %in% c("Temp_F_O", "Temp_F_CR"),], aes(x=DateTime, y=value, color=variable, alpha=variable), size=0.5) +
-      scale_alpha_manual(name="", values=c(0.25, 1), guide=FALSE) +
+      geom_line(data=o, aes(x=DateTime, y=Temp_F, alpha=Alias), color="dimgrey", size=0.8) +
+      geom_line(data=cr, aes(x=DateTime, y=Temp_F, color=Alias), alpha=0.8, size=0.8) +
+      scale_alpha_manual(name="", labels=c(paste(weatherstation, "Weather Station")), values=c(0.5)) +
       scale_x_datetime(breaks=date_breaks("1 month"), labels=date_format("%b %Y")) +
       scale_y_continuous(breaks=seq(60,100,5), limits=c(60,100)) +
-      scale_color_manual(name="", labels=c("Outdoor Temperature", "Classroom Temperature"), values=c("dimgrey", "#CC6666")) +
       ylab("Temperature (°F)") + xlab("Time") + ggtitle(paste0(classroom, ": Temperature Profile")) +
       theme_fivethirtyeight() + theme(text=element_text(size=9),
                                      legend.title=element_blank(),
-                                     legend.position=c(0.10,0.08), 
+                                     legend.position=c(0.12,0.08), 
                                      legend.background=element_rect(color="grey", fill="#F0F0F0", size=0.4, linetype="solid"), legend.box="horizontal") 
   
   # restrict to school hour/dates ------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -98,7 +97,7 @@ classroom-plot <- function(classroom, weatherstation, startdate, enddate) {
    l1 <- ggplot() + 
      geom_hline(yintercept=min_F, linetype="dotted", color="black", size=0.5) +
      geom_line(data=cr.hourly, aes(x=Time, y=value), size=0.8, alpha=0.5, group=1, color="forestgreen") +
-     geom_line(data=o.hourly, aes(x=Time, y=value, linetype=variable, size=variable, group=variable), color="dimgrey") +
+     geom_smooth(data=o.hourly, aes(x=Time, y=value, linetype=variable, size=variable, group=variable), color="dimgrey", fill=NA, span=0.2) +
      facet_grid(~Month) +
      scale_y_continuous(breaks=seq(70,100,5), limits=c(70,100)) +
      scale_x_datetime(breaks=date_breaks("2 hour"), labels=date_format("%H:%M"), limits=lims) +
@@ -109,22 +108,16 @@ classroom-plot <- function(classroom, weatherstation, startdate, enddate) {
    
    ## Obs over 85 - doesn't work!!
    hot <- o[o$UTCI_F>=min_F, c("Date", "Time", "Month")]
-   o$DateTime <- as.POSIXct(paste(o$Date, o$Time), format="%Y-%m-%d %H:%M")
-   reg <- data.frame(DateTime=seq(from=min(o$DateTime), by=15*60, to=max(o$DateTime)))
+   reg <- data.frame(DateTime=seq(from=as.POSIXct(paste(stdt, "08:00")), by=15*60, to=as.POSIXct(paste(endt, "14:00"))))
    
-   findRow <- function(dt, df) { 
-     max(which(df$DateTime <= dt )) 
-   }
-   matchRows <- sapply(o$DateTime, findRow, df=reg) #get rows that are closest and less than - but change to just closest
-   oreg <- cbind(o, regDT=reg[matchRows,])
-   colnames(oreg) <- c("Temp_F", "UTCI_F", "Date", "Time", "Month", "SchoolDate", "SchoolHour", "OriginalDateTime", "DateTime")
+   o$closestDateTime <- reg$DateTime[ findInterval(o$DateTime, c(-Inf, head(reg$DateTime,-1)) + c(0, diff(as.numeric(reg$DateTime))/2 )) ]
    
-   ohot <- merge(oreg, hot, by=c("Date", "Time", "Month")) #get 
-   cr$DateTime <- as.POSIXct(paste(cr$Date, cr$Time), format="%Y-%m-%d %H:%M")
-   crhot <- merge(ohot[,c("DateTime", "OriginalDateTime")], cr, by=c("DateTime"))  
-   
-   cr.hourly <- ddply(crHot, c("Time", "Alias", "Month", "School"), summarize, AvgUTCI=mean(UTCI, na.rm=TRUE))
-   o.hourly <- ddply(oHot, c("Time", "Month"), summarize, AvgTemp=mean(OutdoorTemp, na.rm=TRUE), AvgUTCI=mean(OutdoorUTCI, na.rm=TRUE))
+   ohot <- merge(o, hot, by=c("Date", "Time", "Month")) #get hot obs using closest time match
+   crhot <- cr[cr$DateTime %in% ohot$closestDateTime, ]
+  
+   cr.hourly <- ddply(crhot, c("Time", "Month"), summarize, AvgUTCI=mean(UTCI_F, na.rm=TRUE))
+   ohot$Time <- format(strptime(ohot$closestDateTime, format="%Y-%m-%d %H:%M:%S"), format="%H:%M")
+   o.hourly <- ddply(ohot, c("Time", "Month"), summarize, AvgTemp=mean(Temp_F, na.rm=TRUE), AvgUTCI=mean(UTCI_F, na.rm=TRUE))
    
    o.hourly$Time <- as.POSIXct(o.hourly$Time, format="%H:%M", tz="UTC")
    cr.hourly$Time <- as.POSIXct(cr.hourly$Time, format="%H:%M", tz="UTC")
@@ -140,30 +133,23 @@ classroom-plot <- function(classroom, weatherstation, startdate, enddate) {
    cr.hourly <- merge(cr.hourly, counts, by=c("Month")) 
    cr.hourly$freq <- NULL
    
-   
-   cr.hourly <- melt(cr.hourly, id.vars=c("Time", "Month", "Alias", "School"))
+   cr.hourly <- melt(cr.hourly, id.vars=c("Time", "Month"))
    o.hourly <- melt(o.hourly, id.vars=c("Time", "Month"))
-   o.hourly$monthdisp <- factor(o.hourly$Month, orderedMonths)
-   cr.hourly$monthdisp <- factor(cr.hourly$Month, orderedMonths)
    
    plot.title <- ""
    plot.subtitle <- "Average School Day UTCI, Observations Above 85°F UTCI"
    
    l2 <- ggplot() + 
-     geom_hline(yintercept=minF, linetype="dotted", color="black", size=0.5) +
-     geom_line(data=cr.hourly[cr.hourly$School==school,], aes(x=Time, y=value, color=Alias), size=0.5, alpha=0.5) +
-     geom_line(data=o.hourly, aes(x=Time, y=value, linetype=variable, size=variable), color="dimgrey") +
-     facet_grid(~monthdisp, drop=FALSE) +
+     geom_hline(yintercept=min_F, linetype="dotted", color="black", size=0.5) +
+     geom_line(data=cr.hourly, aes(x=Time, y=value), size=0.8, alpha=0.5, group=1, color="forestgreen") +
+     geom_smooth(data=o.hourly, aes(x=Time, y=value, linetype=variable, size=variable, group=variable), color="dimgrey", fill=NA, span=0.2) +
+     facet_grid(~Month, drop=FALSE) +
      scale_linetype_manual(name = "", values=c("longdash","solid")) +
-     scale_y_continuous(breaks=seq(75,105,5), limits=c(75,105)) +
-     scale_color_manual(values=palette(ann.size)) +
+     scale_y_continuous(breaks=seq(70,100,5), limits=c(70,100)) +
      scale_size_manual(name="", values=c(0.5,0.8)) +
      scale_x_datetime(breaks=date_breaks("2 hour"), labels=date_format("%H:%M"), limits=lims) +
      ggtitle(bquote(atop(.(plot.title), atop(.(plot.subtitle), "")))) +
      theme_fivethirtyeight() + theme(legend.position="none",  text=element_text(size=9))
-   
-   
-   
    
   
    ## Hottest day
@@ -185,7 +171,7 @@ classroom-plot <- function(classroom, weatherstation, startdate, enddate) {
      geom_hline(yintercept=min_F, linetype="dotted", color="black", size=0.5) +
      geom_line(data=cr.hourly, aes(x=Time, y=UTCI_F), size=0.8, alpha=0.5, group=1, color="forestgreen") +
      geom_line(data=o.hourly, aes(x=Time, y=value, linetype=variable, size=variable, group=variable), color="dimgrey") +
-     facet_grid(~Month) +
+     facet_grid(~Month, drop=FALSE) +
      scale_y_continuous(breaks=seq(70,100,5), limits=c(70,100)) +
      scale_color_manual(values=palette(ann.size)) +
      scale_size_manual(name="", values=c(0.5,0.8), guide=FALSE) +
