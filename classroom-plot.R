@@ -21,7 +21,7 @@ classroomplot <- function(classroom, weatherstation, startdate, enddate) {
   o <- o[o$Alias==weatherstation,]
   o$Date <- as.Date(o$Date, format="%Y-%m-%d")
   o$Time <- format(strptime(o$Time, format="%H:%M"), format="%H:%M")
-  o$Month <- factor(format(o$Date, "%B"), c("August", "September", "October", "November", "December", "January", "February", "March", "April", "May", "June", "July"))
+  o$Month <- factor(format(o$Date, "%B"), c("August", "September", "October", "November", "December", "January", "February", "March", "April", "May"))
   o <- o[o$Date >= stdt & o$Date <= endt, ]
   
   cr <-read.csv(file="~/dropbox/rh1/hidoe/output-csv/classroom-master.csv", sep=",") #classroom
@@ -29,7 +29,7 @@ classroomplot <- function(classroom, weatherstation, startdate, enddate) {
   cr <- cr[cr$Alias==classroom,] #restrict to classroom specified
   cr$Date <- as.Date(cr$Date, format="%Y-%m-%d")
   cr$Time <- format(strptime(cr$Time, format="%H:%M"), format="%H:%M")
-  cr$Month <- factor(format(cr$Date, "%B"), c("August", "September", "October", "November", "December", "January", "February", "March", "April", "May", "June", "July"))
+  cr$Month <- factor(format(cr$Date, "%B"), c("August", "September", "October", "November", "December", "January", "February", "March", "April", "May"))
   cr <- cr[cr$Date >= stdt & cr$Date <= endt, ]
   
   # raw data plots -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -38,7 +38,7 @@ classroomplot <- function(classroom, weatherstation, startdate, enddate) {
   
   t <- ggplot() + 
       geom_hline(yintercept=85, color="black", linetype="dotted", size=0.5) +
-      geom_line(data=o, aes(x=DateTime, y=Temp_F, alpha=Alias), color="dimgrey", size=0.8) +
+      geom_line(data=o, aes(x=DateTime, y=Temp_F, alpha=Alias), color="dimgrey", size=0.6) +
       geom_line(data=cr, aes(x=DateTime, y=Temp_F, color=Alias), alpha=0.8, size=0.8) +
       scale_alpha_manual(name="", labels=c(paste(weatherstation, "Weather Station")), values=c(0.5)) +
       scale_x_datetime(breaks=date_breaks("1 month"), labels=date_format("%b %Y")) +
@@ -52,8 +52,6 @@ classroomplot <- function(classroom, weatherstation, startdate, enddate) {
   # restrict to school hour/dates ------------------------------------------------------------------------------------------------------------------------------------------------------------------
   cr <- cr[cr$SchoolDate==1 & cr$SchoolHour==1,]
   o <- o[o$SchoolDate==1 & o$SchoolHour==1,]
-  cr$Month <- factor(format(cr$Date, "%B"), c("August", "September", "October", "November", "December", "January", "February", "March", "April", "May"))
-  o$Month <- factor(format(o$Date, "%B"), c("August", "September", "October", "November", "December", "January", "February", "March", "April", "May"))
   
   o.daily <- ddply(o,c("Date"), summarise, AvgOutdoorTemp=mean(Temp_F, na.rm=TRUE), AvgOutdoorUTCI=mean(UTCI_F, na.rm=TRUE)) #aggregated by date 
   cr.daily <- ddply(cr, c("Date"), summarise, AvgRoomTemp=mean(Temp_F, na.rm=TRUE), MaxRoomTemp=max(Temp_F,na.rm=TRUE), AvgRoomUTCI=mean(UTCI_F, na.rm=TRUE), MaxRoomUTCI=max(UTCI_F, na.rm=TRUE)) #aggregated  by date
@@ -88,7 +86,7 @@ classroomplot <- function(classroom, weatherstation, startdate, enddate) {
    oreg <- o[,c("Temp_F", "UTCI_F", "Alias", "closestDateTime")]
    oreg$Date <- as.Date(oreg$closestDateTime, format="%Y-%m-%d")
    oreg$Time <- format(strptime(oreg$closestDateTime, format="%Y-%m-%d %H:%M:%S"), format="%H:%M")
-   oreg$Month <- factor(format(oreg$Date, "%B"), c("August", "September", "October", "November", "December", "January", "February", "March", "April", "May", "June", "July"))
+   oreg$Month <- factor(format(oreg$Date, "%B"), c("August", "September", "October", "November", "December", "January", "February", "March", "April", "May"))
    
    ## All days
    cr.hourly <- ddply(cr, c("Time", "Month"), summarize, AvgUTCI=mean(UTCI_F, na.rm=TRUE))
