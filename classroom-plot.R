@@ -67,11 +67,11 @@ classroomplot <- function(classroom, weatherstation, startdate, enddate) {
       geom_point(data=cr.daily[cr.daily$variable %in% c("AvgRoomUTCI", "MaxRoomUTCI"),], aes(x=Date, y=value, color=variable, shape=level), alpha=0.5) +
       geom_smooth(data=cro.daily, aes(x=Date, y=value, linetype=variable, size=variable, color=variable), fill=NA, span=0.4) +
       scale_color_manual(name = "", values=c("dimgrey", "dimgrey", "#30A2DA", "#30A2DA", "#FC4F30", "#FC4F30"), guide=FALSE) +   
-      scale_linetype_manual(name="", labels=c("Average Outdoor Temperature", "Average Outdoor UTCI", paste0(classroom1, ": Average Temperature"), paste0(classroom1, ": Maximum Temperature"), paste0(classroom1, ": Average UTCI"), paste0(classroom1, ": Maximum UTCI")), 
+      scale_linetype_manual(name="", labels=c("Average Outdoor Temperature", "Average Outdoor UTCI", paste0(classroom, ": Average Temperature"), paste0(classroom, ": Maximum Temperature"), paste0(classroom, ": Average UTCI"), paste0(classroom, ": Maximum UTCI")), 
                             values=c("dashed","solid", "dashed", "dashed", "solid", "solid")) +
       scale_size_manual(name="", values=c(0.5, 0.8, 0.5, 0.5, 0.8, 0.8), guide=FALSE) +
       scale_shape_manual(name="", labels=c("Classroom (Average UTCI)", "Classroom (Maxmimum UTCI)"), values=c(16, 16)) +
-      scale_y_continuous(breaks=seq(70,105,5), limits = c(70,105)) + 
+      scale_y_continuous(breaks=seq(60,110,5), limits=c(min(cro.daily$value), max(cro.daily$value))) + 
       scale_x_date(date_breaks="1 month", date_labels="%b %Y") + 
       ggtitle(paste(classroom, ": Daily Universal Thermal Climate Index (UTCI) Profile")) +
       theme_fivethirtyeight() +
@@ -178,7 +178,7 @@ classroomplot <- function(classroom, weatherstation, startdate, enddate) {
      geom_line(data=o.hourly, aes(x=Time, y=value, linetype=variable, size=variable, group=variable), color="dimgrey") +
      facet_grid(~Month, drop=FALSE) +
      scale_y_continuous(breaks=seq(70,100,5), limits=c(70,100)) +
-     scale_color_manual(name="", labels=c(classroom), labels=c(paste0(classroom, " UTCI")),values=c("forestgreen")) +
+     scale_color_manual(name="", labels=c(paste0(classroom, " UTCI")),values=c("forestgreen")) +
      scale_size_manual(name="", values=c(0.5,0.8), guide=FALSE) +
      scale_linetype_manual(name = "", labels=c("Outdoor Temperature", "Outdoor UTCI"), values=c("longdash","solid")) +
      scale_x_datetime(breaks=date_breaks("2 hour"), labels=date_format("%H:%M"), limits=lims) +
@@ -193,6 +193,8 @@ classroomplot <- function(classroom, weatherstation, startdate, enddate) {
    
    l <- arrangeGrob(l1,l2,l3, layout_matrix=rbind(c(1), c(2), c(3)))
    ggsave(filename=paste0("~/dropbox/rh1/hidoe/plots/",classroom,".pdf"), l, width=25, height=16, units="in")
+   ggsave(filename=paste0("~/dropbox/rh1/hidoe/plots/hello-",classroom,".pdf"), p, width=25, height=16, units="in")
+   ggsave(filename=paste0("~/dropbox/rh1/hidoe/plots/hi-",classroom,".pdf"), t, width=25, height=16, units="in")
    
   
   
