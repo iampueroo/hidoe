@@ -1,4 +1,4 @@
-  schoolplot <- function(school) {
+  schoolplot <- function(school, weatherstation, startdate, enddate) {
     library(plyr)
     library(reshape2)
     library(ggplot2)
@@ -9,54 +9,58 @@
     library(gtable)
     
     ### Defined variables
-    minF <- 85
-    orderedMonths <- c("August", "September", "October", "November", "December", "January", "February", "March", "April", "May")
+    min_F <- 85
     colors <- c( "dimgrey", "#FC4F30", "#30A2DA")
     colorsHeat <- c("#E69720", "#FC4F30", "#E8E827") 
-    palette <- colorRampPalette(colors=c("green", "purple"))
+    palette <- colorRampPalette(colors=c("green", "navy"))
+    stdt <- as.Date(startdate, format="%Y-%m-%d")
+    endt <- as.Date(enddate, format="%Y-%m-%d")
     
     ## Input variables
+    schoolSave <- tolower(school)
     if (school=="Kaimiloa") {
       schoolTitle <- "Kaimiloa Elementary School"
       ann.size <- 10
-      schoolSave <- "kaimiloa"
     } else if (school=="Campbell") {
       schoolTitle <- "James Campbell High School"
       ann.size <- 30
-      schoolSave <- "campbell"
     } else if (school=="Ilima") {
       schoolTitle <- "Ilima Intermediate School"
       ann.size <- 12
-      schoolSave <- "ilima"
     }
     
     ### Input data 
+    arch <- read.csv(file="~/dropbox/rh1/hidoe/input-csv/classroom-features.csv", sep=",") #classroom architectural data
+    
     o <- read.csv(file="~/dropbox/rh1/hidoe/output-csv/outdoor-master.csv", sep=",") #outdoor 
+    o <- o[o$Alias==weatherstation,]
     o$Date <- as.Date(o$Date, format="%Y-%m-%d")
     o$Time <- format(strptime(o$Time, format="%H:%M"), format="%H:%M")
-    o$Month <- factor(format(o$Date, "%B"), orderedMonths)
-    o$Alias <- NULL #choose what weather station you want from Alias, but for now they're all the same so drop Alias
-    o <- o[o$SchoolDate==1 & o$SchoolHour==1,]
+    o$Month <- factor(format(o$Date, "%B"), c("August", "September", "October", "November", "December", "January", "February", "March", "April", "May"))
+    o <- o[o$Date >= stdt & o$Date <= endt & o$SchoolDate==1 & o$SchoolHour==1, ]
+    o$DateTime <- as.POSIXct(paste(o$Date, o$Time), format="%Y-%m-%d %H:%M")
+    o$Alias <- NULL
     
     cr <-read.csv(file="~/dropbox/rh1/hidoe/output-csv/classroom-master.csv", sep=",") #classroom
+    cr <- merge(cr, arch[,c("RoomID", "Alias", "School", "AC")], by="RoomID", all.x=TRUE) #get room alias 
+    cr <- cr[cr$School==school,] #restrict to classroom specified
     cr$Date <- as.Date(cr$Date, format="%Y-%m-%d")
     cr$Time <- format(strptime(cr$Time, format="%H:%M"), format="%H:%M")
-    cr$Month <- format(cr$Date, "%B") 
-    cr$Month <- factor(format(cr$Date, "%B"), orderedMonths)
-    cr <- cr[cr$SchoolDate==1 & cr$SchoolHour==1,]
+    cr$Month <- factor(format(cr$Date, "%B"), c("August", "September", "October", "November", "December", "January", "February", "March", "April", "May"))
+    cr <- cr[cr$Date >= stdt & cr$Date <= endt & cr$SchoolDate==1 & cr$SchoolHour==1, ]
+    cr$DateTime <- as.POSIXct(paste(cr$Date, cr$Time), format="%Y-%m-%d %H:%M")
     
-    arch <- read.csv(file="~/dropbox/rh1/hidoe/input-csv/classroom-features.csv", sep=",") #classroom architectural data
-    archKeepVars <- c("RoomID", "Alias", "School", "AC")
-    cr <- merge(cr, arch[,c(archKeepVars)], by="RoomID", all.x=TRUE, all.y=TRUE)
+    #remove AC rooms
     cr <- cr[cr$AC==0,]
     cr$AC <- NULL
+    cr$RoomID <- NULL
     
     hottest <- do.call("rbind", by(o, o$Month, function(x) x[which.max(x$UTCI_F),]))
     hottest <- hottest[,c("Date", "Month")]
     
     
-    ### Plots
-    ## Profile
+    ### Plots ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    ## Profile ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     o.daily <- ddply(o,c("Date"), summarise, AvgOutdoorTemp=mean(Temp_F, na.rm=TRUE), AvgOutdoorUTCI=mean(UTCI_F, na.rm=TRUE)) #aggregated by date 
     cr.daily <- ddply(cr, c("Date", "Alias"), summarise, AvgRoomTemp=mean(Temp_F, na.rm=TRUE), MaxRoomTemp=max(Temp_F,na.rm=TRUE), AvgRoomUTCI=mean(UTCI_F, na.rm=TRUE), MaxRoomUTCI=max(UTCI_F, na.rm=TRUE))
     cr.daily$School <- sub("(.*?) - .*", "\\1", cr.daily$Alias)
@@ -73,18 +77,18 @@
     daily.melt$level <- as.factor(ifelse(substr(as.character(daily.melt$variable), 1, 3)=="Avg", "Average", "Maximum"))
     
     p <- ggplot() +
-      geom_hline(yintercept=minF, linetype="dotted", color="black", size=0.5) + 
+      geom_hline(yintercept=min_F, linetype="dotted", color="black", size=0.5) + 
       geom_point(data=daily.melt[daily.melt$School==school & daily.melt$variable %in% c("AvgRoomUTCI", "MaxRoomUTCI"),], aes(x=Date, y=value, color=variable, shape=level), alpha=0.2) +
       geom_smooth(data=daily.melt[daily.melt$Alias %in% c(school, "Outdoor"),], aes(x=Date, y=value, linetype=variable, size=variable, color=variable), fill=NA, span=0.4) +
       scale_color_manual(name = "", values=c("dimgrey", "dimgrey", "#30A2DA", "#30A2DA", "#30A2DA", "#FC4F30", "#FC4F30", "#FC4F30"), guide=FALSE) +   
-      scale_linetype_manual(name="", labels=c("Avg Outdoor UTCI", "Avg Outdoor Temp", "Avg School Temp", "Max School Temp", "Avg School UTCI", "Max School UTCI"), values=c("dashed","solid", "dashed", "dashed", "solid", "solid")) +
+      scale_linetype_manual(name="", labels=c("Average Outdoor UTCI", "Average Outdoor Temperature", "Average School Temperature", "Maximum School Temperature", "Average School UTCI", "Maximum School UTCI"), values=c("dashed","solid", "dashed", "dashed", "solid", "solid")) +
       scale_size_manual(name="", values=c(0.5, 0.8, 0.5, 0.5, 0.8, 0.8), guide=FALSE) +
       scale_shape_manual(name="", labels=c("Classroom (Average UTCI)", "Classroom (Maxmimum UTCI)"), values=c(16, 16)) +
       scale_y_continuous(breaks=seq(70,105,5), limits = c(70,105)) + 
       scale_x_date(date_breaks="1 month", date_labels="%b '%y") + 
       ggtitle(paste(" Daily Universal Thermal Climate Index (UTCI) Profile: ", schoolTitle)) +
       theme_fivethirtyeight() +
-      theme(text=element_text(size=9), legend.title=element_blank(), legend.position=c(0.13,0.08), legend.background=element_rect(color="grey", fill="#F0F0F0", size=0.4, linetype="solid"), legend.box="horizontal") +
+      theme(text=element_text(size=9), legend.title=element_blank(), legend.position=c(0.17,0.08), legend.background=element_rect(color="grey", fill="#F0F0F0", size=0.4, linetype="solid"), legend.box="horizontal") +
       guides(linetype = guide_legend(override.aes = list(size=0.5, linetype=c(1,2,2,2,1,1), color=c("dimgrey", "dimgrey", "#30A2DA", "#FC4F30", "#30A2DA", "#FC4F30"))),
              shape = guide_legend(ncol=1, override.aes = list(alpha=c(0.6,0.6), color=c("#30A2DA", "#FC4F30"))))
     
@@ -103,28 +107,25 @@
     d3.daily$smooth <- models$X..i..
     
     
-    ### Bar plot
-    ## All days
-    cro <- merge(cr, o, by=c("Time", "Month", "Date"), all.x=TRUE, suffixes=c("_CR", "_O"))
-    cro$TimeUnit <- ifelse(cro$Time=="08:00",0,.25) #start counting hours after 8 AM
-    cro$OutTimeUnit <- ifelse((is.na(cro$UTCI_F_O) | cro$Time=="08:00"),0,.25) 
-    cro$InGE85 <- ifelse((cro$UTCI_F_CR>=minF)==TRUE & cro$Time!="08:00",.25,0)
-    cro$OutGE85 <-ifelse((cro$UTCI_F_O>=minF)==TRUE & cro$Time!="08:00",.25,0)
+    ### Bar plot --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    o <- o[with(o, order(DateTime)), ]
+    cr <- cr[with(cr, order(Alias, DateTime)), ]
+    cr <- ddply(cr, c("Alias", "Date"), transform, TimeUnit=c(0, difftime(tail(DateTime, -1), head(DateTime, -1)))/60)
+    o <- ddply(o, c("Date"), transform, TimeUnit=c(0, difftime(tail(DateTime, -1), head(DateTime, -1)))/60)
+    o$GE85 <- ifelse(o$UTCI_F>=min_F, o$TimeUnit, 0)
+    cr$GE85 <- ifelse(cr$UTCI_F>=min_F, cr$TimeUnit, 0)
     
-    o.daily <- ddply(cro, c("Date","Alias", "Month"), summarize, OutGE85Count=sum(OutGE85, na.rm=TRUE), Count=sum(OutTimeUnit, na.rm=TRUE))
-    o.daily <- ddply(o.daily, "Month", summarize, AvgHotHours=mean(OutGE85Count, na.rm=TRUE))
+    ## All days---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    o.daily <- ddply(o, c("Date", "Month"), summarize, CountGE=sum(GE85, na.rm=TRUE))
+    o.daily <- ddply(o.daily, "Month", summarize, AvgHotHours=mean(CountGE, na.rm=TRUE))
     o.daily$AvgHotHours <- with(o.daily, round(AvgHotHours,2))
     
-    cr.daily <- ddply(cro, c("Date","Alias", "Month", "School"), summarize, InGE85Count=sum(InGE85, na.rm=TRUE), Count=sum(TimeUnit, na.rm=TRUE))
-    cr.daily <- ddply(cr.daily, c("Month", "Alias"), summarize, AvgHotHours=mean(InGE85Count, na.rm=TRUE))
+    cr.daily <- ddply(cr, c("Date","Alias", "Month"), summarize, CountGE=sum(GE85, na.rm=TRUE))
+    cr.daily <- ddply(cr.daily, c("Month", "Alias"), summarize, AvgHotHours=mean(CountGE, na.rm=TRUE))
     cr.daily$AvgHotHours <- with(cr.daily, round(AvgHotHours,2))
     
-    o.daily$School <- "Outdoor"
+    
     o.daily$Alias <- "Outdoor"
-    cr.daily$School <- sub("(.*?) - .*", "\\1", cr.daily$Alias)
-    
-    d3.bar <- rbind(o.daily, cr.daily)
-    
     cr.daily$Room <- sub(".*- ", "", cr.daily$Alias)
     cr.daily$Room <- ifelse(cr.daily$Alias=="Campbell - N (Robotics)", "N", cr.daily$Room)
     cr.daily$Hot <- ifelse(cr.daily$AvgHotHours>4, "Red", ifelse(cr.daily$AvgHotHours>2, "Orange", "Yellow"))
@@ -139,7 +140,7 @@
     plot.subtitle <- "School Hours Above 85°F UTCI, All Days"
     
     b1 <- ggplot() + 
-      geom_bar(data=cr.daily[cr.daily$School==school,], aes(x=Room, y=AvgHotHours, fill=Hot), alpha=0.5, stat="identity") + 
+      geom_bar(data=cr.daily, aes(x=Room, y=AvgHotHours, fill=Hot), alpha=0.5, stat="identity") + 
       geom_hline(data=o.daily, aes(yintercept=AvgHotHours), color="dimgrey", size=0.3) +
       geom_text(data=ann, aes(x, y, label=lab, group=1), color="dimgrey", size=2.5, hjust="left") + 
       facet_grid(~Month, drop=FALSE) +
@@ -147,28 +148,23 @@
       scale_y_continuous(breaks=seq(0,6,1), limits=c(0,6.15)) +
       ggtitle(bquote(atop(.(plot.title), atop(.(plot.subtitle), "")))) +
       theme_fivethirtyeight() +
-      theme(legend.position="none", text=element_text(size=9), axis.text.x=element_text(angle=90, hjust=1))
+      theme(legend.position="none", text=element_text(size=9), axis.text.x=element_text(size=5, angle=90, hjust=1))
     
     ## Reaching 85
-    
-    hot <- ddply(cro, c("Date"), summarize, Hot=sum(OutGE85, na.rm=TRUE)) 
+    hot <- ddply(o, c("Date"), summarize, Hot=sum(GE85, na.rm=TRUE)) 
     hot <- hot[hot$Hot>0,]
-    croHot <- merge(cro, hot, by="Date")
+    crhot <- merge(cr, hot, by="Date")
+    ohot <- merge(o, hot, by="Date")
     
-    o.daily <- ddply(croHot, c("Date","Alias", "Month"), summarize, OutGE85Count=sum(OutGE85, na.rm=TRUE), Count=sum(OutTimeUnit, na.rm=TRUE))
-    o.daily <- ddply(o.daily, "Month", summarize, AvgHotHours=mean(OutGE85Count, na.rm=TRUE))
+    o.daily <- ddply(ohot, c("Date", "Month"), summarize, CountGE=sum(GE85, na.rm=TRUE))
+    o.daily <- ddply(o.daily, "Month", summarize, AvgHotHours=mean(CountGE, na.rm=TRUE))
     o.daily$AvgHotHours <- with(o.daily, round(AvgHotHours,2))
     
-    cr.daily <- ddply(croHot, c("Date","Alias", "Month", "School"), summarize, InGE85Count=sum(InGE85, na.rm=TRUE), Count=sum(TimeUnit, na.rm=TRUE))
-    cr.daily <- ddply(cr.daily, c("Month", "Alias"), summarize, AvgHotHours=mean(InGE85Count, na.rm=TRUE))
-    cr.daily$AvgHotHours <- with(cr.daily, round(AvgHotHours,2))    
+    cr.daily <- ddply(crhot, c("Date","Alias", "Month"), summarize, CountGE=sum(GE85, na.rm=TRUE))
+    cr.daily <- ddply(cr.daily, c("Month", "Alias"), summarize, AvgHotHours=mean(CountGE, na.rm=TRUE))
+    cr.daily$AvgHotHours <- with(cr.daily, round(AvgHotHours,2))   
     
-    o.daily$School <- "Outdoor"
     o.daily$Alias <- "Outdoor"
-    cr.daily$School <- sub("(.*?) - .*", "\\1", cr.daily$Alias)
-    
-    d3.bar <- merge(d3.bar, rbind(o.daily, cr.daily)[, c("Month", "AvgHotHours", "School", "Alias")], by=c("Month", "School", "Alias"), suffixes=c("", "Hot"), all.x=TRUE)
-    
     cr.daily$Room <- sub(".*- ", "", cr.daily$Alias)
     cr.daily$Room <- ifelse(cr.daily$Alias=="Campbell - N (Robotics)", "N", cr.daily$Room)
     cr.daily$Hot <- ifelse(cr.daily$AvgHotHours>4, "Red", ifelse(cr.daily$AvgHotHours>2, "Orange", "Yellow"))
@@ -178,13 +174,12 @@
     ann$y <- ann$AvgHotHours + .15
     ann$lab <- paste0("Outdoor Average: ", ann$AvgHotHours, " hr")
     ann <- ann[,c("x", "y", "lab", "Month")]
-    ann$monthdisp <- factor(ann$Month, orderedMonths)
     
     plot.title <- ""
     plot.subtitle <- "School Hours Above 85°F UTCI, Days Reaching 85°F"
     
     b2 <- ggplot() + 
-      geom_bar(data=cr.daily[cr.daily$School==school,], aes(x=Room, y=AvgHotHours, fill=Hot), alpha=0.5, stat="identity") + 
+      geom_bar(data=cr.daily, aes(x=Room, y=AvgHotHours, fill=Hot), alpha=0.5, stat="identity") + 
       geom_hline(data=o.daily, aes(yintercept=AvgHotHours), color="dimgrey", size=0.3) +
       geom_text(data=ann, aes(x, y, label=lab, group=1), color="dimgrey", size=2.5, hjust="left") + 
       facet_grid(~Month, drop=FALSE) +
@@ -192,24 +187,21 @@
       scale_y_continuous(breaks=seq(0,6,1), limits=c(0,6.15)) +
       ggtitle(bquote(atop(.(plot.title), atop(.(plot.subtitle), "")))) +
       theme_fivethirtyeight() +
-      theme(legend.position="none", text=element_text(size=9), axis.text.x=element_text(angle=90, hjust=1))
+      theme(legend.position="none", text=element_text(size=9), axis.text.x=element_text(size=5, angle=90, hjust=1))
     
     ## Hottest day
-    croMax <- merge(cro, hottest, by=c("Date","Month"))
+    crhottest <- merge(cr, hottest, by=c("Date", "Month"))
+    ohottest <- merge(o, hottest, by=c("Date", "Month"))
     
-    o.daily <- ddply(croMax, c("Date","Alias", "Month"), summarize, OutGE85Count=sum(OutGE85, na.rm=TRUE), Count=sum(OutTimeUnit, na.rm=TRUE))
-    o.daily <- ddply(o.daily, "Month", summarize, AvgHotHours=mean(OutGE85Count, na.rm=TRUE))
+    o.daily <- ddply(ohottest, c("Date", "Month"), summarize, CountGE=sum(GE85, na.rm=TRUE))
+    o.daily <- ddply(o.daily, "Month", summarize, AvgHotHours=mean(CountGE, na.rm=TRUE))
     o.daily$AvgHotHours <- with(o.daily, round(AvgHotHours,2))
-    cr.daily <- ddply(croMax, c("Date","Alias", "Month", "School"), summarize, InGE85Count=sum(InGE85, na.rm=TRUE), Count=sum(TimeUnit, na.rm=TRUE))
-    cr.daily <- ddply(cr.daily, c("Month", "Alias"), summarize, AvgHotHours=mean(InGE85Count, na.rm=TRUE))
-    cr.daily$AvgHotHours <- with(cr.daily, round(AvgHotHours,2))                                
     
-    o.daily$School <- "Outdoor"
+    cr.daily <- ddply(crhottest, c("Date","Alias", "Month"), summarize, CountGE=sum(GE85, na.rm=TRUE))
+    cr.daily <- ddply(cr.daily, c("Month", "Alias"), summarize, AvgHotHours=mean(CountGE, na.rm=TRUE))
+    cr.daily$AvgHotHours <- with(cr.daily, round(AvgHotHours,2))   
+    
     o.daily$Alias <- "Outdoor"
-    cr.daily$School <- sub("(.*?) - .*", "\\1", cr.daily$Alias)
-    
-    d3.bar <- merge(d3.bar, rbind(o.daily, cr.daily)[, c("Month", "AvgHotHours", "School", "Alias")], by=c("Month", "School", "Alias"), suffixes=c("", "Hottest"), all.x=TRUE) 
-    
     cr.daily$Room <- sub(".*- ", "", cr.daily$Alias)
     cr.daily$Room <- ifelse(cr.daily$Alias=="Campbell - N (Robotics)", "N", cr.daily$Room)
     cr.daily$Hot <- ifelse(cr.daily$AvgHotHours>4, "Red", ifelse(cr.daily$AvgHotHours>2, "Orange", "Yellow"))
@@ -219,12 +211,11 @@
     ann$y <- ann$AvgHotHours + .15
     ann$lab <- paste0("Outdoor Average: ", ann$AvgHotHours, " hr")
     ann <- ann[,c("x", "y", "lab", "Month")]
-    ann$monthdisp <- factor(ann$Month, orderedMonths)
     
     plot.subtitle <- "School Hours Above 85°F UTCI, Hottest Day"
     
     b3 <- ggplot() + 
-      geom_bar(data=cr.daily[cr.daily$School==school,], aes(x=Room, y=AvgHotHours, fill=Hot), alpha=0.5, stat="identity") + 
+      geom_bar(data=cr.daily, aes(x=Room, y=AvgHotHours, fill=Hot), alpha=0.5, stat="identity") + 
       geom_hline(data=o.daily, aes(yintercept=AvgHotHours), color="dimgrey", size=0.3) +
       geom_text(data=ann, aes(x, y, label=lab, group=1), color="dimgrey", size=2.5, hjust="left") + 
       facet_grid(~Month, drop=FALSE) +
@@ -232,24 +223,25 @@
       scale_y_continuous(breaks=seq(0,6,1), limits=c(0,6.15)) +
       ggtitle(bquote(atop(.(plot.title), atop(.(plot.subtitle), "")))) +
       theme_fivethirtyeight() +
-      theme(legend.position="none", text=element_text(size=9), axis.text.x=element_text(angle=90, hjust=1))
+      theme(legend.position="none", text=element_text(size=9), axis.text.x=element_text(size=5, angle=90, hjust=1))
     
     b <- arrangeGrob(b1,b2,b3, layout_matrix=rbind(c(1), c(2), c(3)))
+    ggsave(filename=paste0("~/dropbox/rh1/hidoe/plots/hours-above-85-",schoolSave,".pdf"), b, width=25, height=16, units="in")
     
-    ### Line
+    ### Line ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    reg <- data.frame(DateTime=seq(from=as.POSIXct(paste(stdt, "08:00")), by=15*60, to=as.POSIXct(paste(endt, "14:00"))))
+    o$closestDateTime <- reg$DateTime[ findInterval(o$DateTime, c(-Inf, head(reg$DateTime,-1)) + c(0, diff(as.numeric(reg$DateTime))/2 )) ]
+    oreg <- o[,c("Temp_F", "UTCI_F", "closestDateTime")]
+    oreg$Date <- as.Date(oreg$closestDateTime, format="%Y-%m-%d")
+    oreg$Time <- format(strptime(oreg$closestDateTime, format="%Y-%m-%d %H:%M:%S"), format="%H:%M")
+    oreg$Month <- factor(format(oreg$Date, "%B"), c("August", "September", "October", "November", "December", "January", "February", "March", "April", "May"))
+    
     ## All days
-    cr.hourly <- ddply(cr, c("Time", "Alias", "Month", "School"), summarize, AvgUTCI=mean(UTCI_F, na.rm=TRUE))
-    o.hourly <- ddply(o, c("Time", "Month"), summarize, AvgTemp=mean(Temp_F, na.rm=TRUE), AvgUTCI=mean(UTCI_F, na.rm=TRUE))
+    cr.hourly <- ddply(cr, c("Time", "Alias", "Month"), summarize, AvgUTCI=mean(UTCI_F, na.rm=TRUE))
+    o.hourly <- ddply(oreg, c("Time", "Month"), summarize, AvgTemp=mean(Temp_F, na.rm=TRUE), AvgUTCI=mean(UTCI_F, na.rm=TRUE))
     
-    cr.hourly <- melt(cr.hourly, id.vars=c("Time", "Month", "Alias", "School"))
+    cr.hourly <- melt(cr.hourly, id.vars=c("Time", "Alias", "Month"))
     o.hourly <- melt(o.hourly, id.vars=c("Time", "Month"))
-    
-    o.hourly$Alias <- "Outdoor"
-    o.hourly$School <- "Outdoor"
-    
-    o.hourly$variable <- ifelse(o.hourly$variable=="AvgTemp", "AvgOutdoorTemp", "AvgOutdoorUTCI")
-    d3.line <- rbind(o.hourly, cr.hourly)
-    
     o.hourly$Time <- as.POSIXct(o.hourly$Time, format="%H:%M", tz="UTC")
     cr.hourly$Time <- as.POSIXct(cr.hourly$Time, format="%H:%M", tz="UTC")
     
@@ -258,8 +250,8 @@
     plot.subtitle <- "Average School Day UTCI, All Observations"
     
     l1 <- ggplot() + 
-      geom_hline(yintercept=minF, linetype="dotted", color="black", size=0.5) +
-      geom_line(data=cr.hourly[cr.hourly$School==school,], aes(x=Time, y=value, group=Alias, color=Alias), size=0.3, alpha=0.5, show.legend = FALSE) +
+      geom_hline(yintercept=min_F, linetype="dotted", color="black", size=0.5) +
+      geom_line(data=cr.hourly, aes(x=Time, y=value, group=Alias, color=Alias), size=0.3, alpha=0.5, show.legend = FALSE) +
       geom_line(data=o.hourly, aes(x=Time, y=value, linetype=variable, size=variable), color="dimgrey") +
       facet_grid(~Month, drop=FALSE) +
       scale_y_continuous(breaks=seq(70,100,5), limits=c(70,100)) +
@@ -272,10 +264,13 @@
     
     
     ## Obs over 85
-    oHot <- o[o$UTCI_F>=minF,]
-    crHot <- merge(oHot[,c("Date", "Time", "Month")], cr, by=c("Date", "Time", "Month"))  
-    cr.hourly <- ddply(crHot, c("Time", "Alias", "Month", "School"), summarize, AvgUTCI=mean(UTCI_F, na.rm=TRUE))
-    o.hourly <- ddply(oHot, c("Time", "Month"), summarize, AvgTemp=mean(Temp_F, na.rm=TRUE), AvgUTCI=mean(UTCI_F, na.rm=TRUE))
+    hot <- oreg[oreg$UTCI_F>=min_F, c("Date", "Time", "Month")]
+    
+    ohot <- merge(oreg, hot, by=c("Date", "Time", "Month")) #get hot obs using closest time match
+    crhot <- cr[cr$DateTime %in% ohot$closestDateTime, ]
+    
+    cr.hourly <- ddply(crhot, c("Time", "Alias", "Month"), summarize, AvgUTCI=mean(UTCI_F, na.rm=TRUE))
+    o.hourly <- ddply(ohot, c("Time", "Month"), summarize, AvgTemp=mean(Temp_F, na.rm=TRUE), AvgUTCI=mean(UTCI_F, na.rm=TRUE))
     
     o.hourly$Time <- as.POSIXct(o.hourly$Time, format="%H:%M", tz="UTC")
     cr.hourly$Time <- as.POSIXct(cr.hourly$Time, format="%H:%M", tz="UTC")
@@ -291,26 +286,16 @@
     o.hourly$freq <- NULL
     cr.hourly$freq <- NULL
     
-    cr.hourly <- melt(cr.hourly, id.vars=c("Time", "Month", "Alias", "School"))
+    cr.hourly <- melt(cr.hourly, id.vars=c("Time", "Month", "Alias"))
     o.hourly <- melt(o.hourly, id.vars=c("Time", "Month"))
     
-    o.hourly$Time <- format(strptime(o.hourly$Time, format="%Y-%m-%d %H:%M"), format="%H:%M")
-    o.hourly$variable <- ifelse(o.hourly$variable=="AvgTemp", "AvgOutdoorTemp", "AvgOutdoorUTCI")
-    o.hourly$Alias <- "Outdoor"
-    o.hourly$School <- "Outdoor"
-    cr.hourly$Time <- format(strptime(cr.hourly$Time, format="%Y-%m-%d %H:%M"), format="%H:%M")
-    
-    d3.line <- merge(d3.line, rbind(o.hourly, cr.hourly), by=c("Month", "School", "Alias", "variable", "Time"), suffixes=c("", "Hot"), all.x=TRUE)
-    
-    o.hourly$Time <- as.POSIXct(o.hourly$Time, format="%H:%M", tz="UTC")
-    cr.hourly$Time <- as.POSIXct(cr.hourly$Time, format="%H:%M", tz="UTC")    
     
     plot.title <- ""
     plot.subtitle <- "Average School Day UTCI, Observations Above 85°F UTCI"
     
     l2 <- ggplot() + 
-      geom_hline(yintercept=minF, linetype="dotted", color="black", size=0.5) +
-      geom_line(data=cr.hourly[cr.hourly$School==school,], aes(x=Time, y=value, group=Alias, color=Alias), size=0.3, alpha=0.5, show.legend = FALSE) +
+      geom_hline(yintercept=min_F, linetype="dotted", color="black", size=0.5) +
+      geom_line(data=cr.hourly, aes(x=Time, y=value, group=Alias, color=Alias), size=0.3, alpha=0.5, show.legend = FALSE) +
       geom_line(data=o.hourly, aes(x=Time, y=value, linetype=variable, size=variable), color="dimgrey") +
       facet_grid(~Month, drop=FALSE) +
       scale_linetype_manual(name = "", values=c("longdash","solid")) +
@@ -323,23 +308,16 @@
     
     
     ## Hottest day
-    cr.hourly <- merge(cr[,c("Time", "Date", "Month", "Alias", "UTCI_F", "School")], hottest, by=c("Date","Month"))
-    o.hourly <- merge(o, hottest, by=c("Date","Month"))
+    hottest <- do.call("rbind", by(oreg, oreg$Month, function(x) x[which.max(x$UTCI_F),c("Month", "Date")]))
     
-    o.hourly <- melt(o.hourly, id.vars=c("Time", "Month", "Date"))
-    cr.hourly <- melt(cr.hourly, id.vars=c("Time", "Month", "Alias", "School", "Date"))
+    crhottest <- merge(cr, hottest, by=c("Date","Month"))
+    ohottest <- merge(oreg, hottest, by=c("Date","Month"))
     
-    o.hourly$variable <- ifelse(o.hourly$variable=="Temp_F", "AvgOutdoorTemp", "AvgOutdoorUTCI")
-    cr.hourly$variable <- "AvgUTCI"
+    cr.hourly <- ddply(crhottest, c("Time", "Month", "Alias"), summarize, AvgUTCI=mean(UTCI_F, na.rm=TRUE))
+    o.hourly <- ddply(ohottest, c("Time", "Month"), summarize, AvgTemp=mean(Temp_F, na.rm=TRUE), AvgUTCI=mean(UTCI_F, na.rm=TRUE))
     
-    o.hourly$Alias <- "Outdoor"
-    o.hourly$School <- "Outdoor"
-    
-    d3.line <- merge(d3.line, rbind(o.hourly, cr.hourly), by=c("Month", "School", "Alias", "variable", "Time"), suffixes=c("", "Hottest"), all.x=TRUE)
-    d3.line$HottestDay <- d3.line$Date
-    d3.line$Date <- NULL
-    d3.line <- d3.line[order(d3.line$Alias, d3.line$variable, d3.line$Month, d3.line$Time),]
-    d3.line$ID <- 1:nrow(d3.line)
+    o.hourly <- melt(o.hourly, id.vars=c("Time", "Month"))
+    cr.hourly <- melt(cr.hourly, id.vars=c("Time", "Month", "Alias"))
     
     o.hourly$Time <- as.POSIXct(o.hourly$Time, format="%H:%M", tz="UTC")
     cr.hourly$Time <- as.POSIXct(cr.hourly$Time, format="%H:%M", tz="UTC")
@@ -349,11 +327,11 @@
     
     
     l3 <- ggplot() + 
-      geom_hline(yintercept=minF, linetype="dotted", color="black", size=0.5) +
-      geom_line(data=cr.hourly[cr.hourly$School==school,], aes(x=Time, y=value, group=Alias, color=Alias), size=0.3, alpha=0.5, show.legend = FALSE) +
+      geom_hline(yintercept=min_F, linetype="dotted", color="black", size=0.5) +
+      geom_line(data=cr.hourly, aes(x=Time, y=value, group=Alias, color=Alias), size=0.3, alpha=0.5, show.legend = FALSE) +
       geom_line(data=o.hourly, aes(x=Time, y=value, linetype=variable, size=variable), color="dimgrey") +
       facet_grid(~Month, drop=FALSE) +
-      scale_y_continuous(breaks=seq(70,100,5), limits=c(70,100)) +
+      scale_y_continuous(breaks=seq(65,100,5), limits=c(65,100)) +
       scale_color_manual(values=palette(ann.size)) +
       scale_size_manual(name="", values=c(0.5,0.8), guide=FALSE) +
       scale_linetype_manual(name = "", labels=c("Outdoor Temperature", "Outdoor UTCI"), values=c("longdash","solid")) +
@@ -361,7 +339,7 @@
       ggtitle(bquote(atop(.(plot.title), atop(.(plot.subtitle), "")))) +
       theme_fivethirtyeight() + theme(text=element_text(size=9),
                                       legend.title=element_blank(),
-                                      legend.position=c(0.06,0.15), 
+                                      legend.position=c(0.06,0.12), 
                                       legend.background=element_rect(color="grey", fill="#F0F0F0", size=0.4, linetype="solid"), legend.box="horizontal") 
     
     l <- arrangeGrob(l1,l2,l3, layout_matrix=rbind(c(1), c(2), c(3)))
