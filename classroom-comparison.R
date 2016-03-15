@@ -41,28 +41,48 @@ classroomcomparison <- function(classroom1, startdate1, enddate1, weatherstation
   cr2 <- cr2[cr2$Date >= stdt2 & cr2$Date <= endt2, ]
   
   # restrict to school hour/dates ------------------------------------------------------------------------------------------------------------------------------------------------------------------
-  cr <- rbind(cr1, cr2)
-  cr <- cr[cr$SchoolDate==1 & cr$SchoolHour==1,]
+  cr1 <- cr1[cr1$SchoolDate==1 & cr1$SchoolHour==1,]
+  cr2 <- cr2[cr2$SchoolDate==1 & cr2$SchoolHour==1,]
+  
+  
+  cr1.daily <- ddply(cr1, c("Date", "Day", "Alias"), summarise, MaxUTCI=max(UTCI_F, na.rm=TRUE), AvgUTCI=mean(UTCI_F, na.rm=TRUE)) #aggregated by date  
+  cr2.daily <- ddply(cr2, c("Date", "Day", "Alias"), summarise, MaxUTCI=max(UTCI_F, na.rm=TRUE), AvgUTCI=mean(UTCI_F, na.rm=TRUE)) #aggregated by date  
+  o1.daily <- ddply(o1, c("Date", "Day", "Alias"), summarise, AvgTemp=mean(Temp_F, na.rm=TRUE), AvgUTCI=mean(UTCI_F, na.rm=TRUE)) #aggregated by date 
+  o2.daily <- ddply(o2, c("Date", "Day", "Alias"), summarise, AvgTemp=mean(Temp_F, na.rm=TRUE), AvgUTCI=mean(UTCI_F, na.rm=TRUE)) #aggregated by date 
+  
+  cr.daily <- merge(cr1.daily, cr2.daily, by=c("Day"), suffixes=c("1", "2"), all.x=TRUE, all.y=TRUE)
+  cr.daily$Alias1 <- NULL
+  cr.daily$Alias2 <- NULL
+  cr.daily <- melt(cr.daily, id.vars=c("Day", "Date1", "Date2"))
+  
+  cr.daily$Date <- ifelse(!(is.na(cr.daily$Date2)), as.character(cr.daily$Date2), 
+                   ifelse(cr.daily$Date1 <= as.Date(paste0(substr(startdate1,1,4), "-12-31")), paste0(substr(startdate2,1,4),"-", cr.daily$Day),
+                   paste0(substr(enddate2,1,4),"-", cr.daily$Day)))
+  cr.daily$Date <- as.Date(cr.daily$Date, format="%Y-%m-%d")
+  cr.daily$map <- ifelse(substr(cr.daily$variable,8,8)=="1", paste(classroom1, cr.daily$variable, sep=";"), paste(classroom2, cr.daily$variable, sep=";"))
+  
   
   if (weatherstation1 == weatherstation2) {
-    o <- o1
-    o$Alias <- "Outdoor"
-    o <- o[o$SchoolDate==1 & o$SchoolHour==1,]
+    o.daily <- o1.daily
+    o.daily$Date1 <- o.daily$Date
+    o.daily$Date2 <- o.daily$Date
+    o.daily$Alias <- NULL
+    
   } else {
-    o <- rbind(o1, o2)
-    o$Alias <- ifelse(o$Alias == weatherstation1, paste0(substr(startdate1,1,4), "-", substr(enddate1,3,4)), paste0(substr(startdate2,1,4), "-", substr(enddate2,3,4)))
-    o <- o[o$SchoolDate==1 & o$SchoolHour==1,] 
+    o.daily <- merge(o1.daily, o2.daily, by=c("Day"), suffixes=c("1", "2"), all.x=TRUE, all.y=TRUE)
+    o.daily$Alias1 <- NULL
+    o.daily$Alias2 <- NULL
   }
+  o.daily <- melt(o.daily, id.vars=c("Day", "Date1", "Date2"))
   
-  o.daily <- ddply(o,c("Date", "Day", "Alias"), summarise, AvgTemp=mean(Temp_F, na.rm=TRUE), AvgUTCI=mean(UTCI_F, na.rm=TRUE)) #aggregated by date 
-  cr.daily <- ddply(cr, c("Date", "Day", "Alias"), summarise, AvgUTCI=mean(UTCI_F, na.rm=TRUE), MaxUTCI=max(UTCI_F, na.rm=TRUE)) #aggregated  by date
-  
-  o.daily <- melt(o.daily, id.vars=c("Date", "Alias", "Day"))
-  cr.daily <- melt(cr.daily, id.vars=c("Date", "Alias", "Day"))
+  o.daily$Date <- ifelse(!(is.na(o.daily$Date2)), as.character(o.daily$Date2), 
+                   ifelse(o.daily$Date1 <= as.Date(paste0(substr(startdate1,1,4), "-12-31")), paste0(substr(startdate2,1,4),"-", o.daily$Day),
+                   paste0(substr(enddate2,1,4),"-", o.daily$Day)))
+  o.daily$Date <- as.Date(o.daily$Date, format="%Y-%m-%d")
+  o.daily$map <- ifelse(substr(o.daily$variable,8,8)=="1", paste(paste0(substr(startdate1,1,4), "-", substr(enddate1,3,4)), o.daily$variable, sep=";"), paste(paste0(substr(startdate2,1,4), "-", substr(enddate2,3,4)), o.daily$variable, sep=";"))
   
   cro.daily <- rbind(o.daily, cr.daily)
-  cro.daily$map <- paste(cro.daily$Alias, cro.daily$variable, sep=";")
-  cro.daily$plotDate <- as.Date(paste0("2016-",cro.daily$Day))
+  cro.daily$variable <- substr(cro.daily$variable,1,7)
   
   plot.title <- "Daily Universal Thermal Climate Index (UTCI) Profile"
   plot.subtitle <- paste0(classroom1, " (", paste0(substr(startdate1,1,4), "-", substr(enddate1,3,4)), ") vs. ", classroom2, " (", paste0(substr(startdate2,1,4), "-", substr(enddate2,3,4)), ")")
