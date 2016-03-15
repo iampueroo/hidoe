@@ -101,7 +101,7 @@ classroomcomparison <- function(classroom1, startdate1, enddate1, weatherstation
                            values=c("dashed", "solid", "dashed", "solid", "solid", "solid", "solid", "solid")) +
     scale_size_manual(name="", values=c(0.5, 0.8, 0.5, 0.8, 0.8, 0.8, 0.8, 0.8), guide=FALSE) +
     scale_shape_manual(name="", labels=c(paste(classroom1, "(Maximum UTCI)"), paste(classroom2, "(Maximum UTCI)")), values=rep(16, times=6)) +
-    scale_y_continuous(breaks=seq(60,110,5), limits=c(min(cro.daily$value), max(cro.daily$value))) + 
+    scale_y_continuous(breaks=seq(60,110,5), limits=c(min(cro.daily$value, na.rm=TRUE)-5, max(cro.daily$value, na.rm=TRUE)+5)) + 
     scale_x_date(date_breaks="1 month", date_labels="%b-%d") + 
     ggtitle(bquote(atop(.(plot.title), atop(.(plot.subtitle), "")))) +
     theme_fivethirtyeight() +
@@ -114,13 +114,34 @@ classroomcomparison <- function(classroom1, startdate1, enddate1, weatherstation
   reg2 <- data.frame(DateTime=seq(from=as.POSIXct(paste(stdt2, "08:00")), by=15*60, to=as.POSIXct(paste(endt2, "14:00"))))
   o1$closestDateTime <- reg1$DateTime[ findInterval(o1$DateTime, c(-Inf, head(reg1$DateTime,-1)) + c(0, diff(as.numeric(reg1$DateTime))/2 )) ]
   o2$closestDateTime <- reg2$DateTime[ findInterval(o2$DateTime, c(-Inf, head(reg2$DateTime,-1)) + c(0, diff(as.numeric(reg2$DateTime))/2 )) ]
-  ## All days
-  cr.hourly <- ddply(cr, c("Time", "Month", "Alias"), summarize, AvgUTCI=mean(UTCI_F, na.rm=TRUE))
-  o.hourly <- ddply(o, c("Time", "Month"), summarize, AvgTemp=mean(Temp_F, na.rm=TRUE), AvgUTCI=mean(UTCI_F, na.rm=TRUE))
   
+  oreg1 <- o1[,c("Temp_F", "UTCI_F", "Alias", "closestDateTime")]
+  oreg1$Date <- as.Date(oreg1$closestDateTime, format="%Y-%m-%d")
+  oreg1$Time <- format(strptime(oreg1$closestDateTime, format="%Y-%m-%d %H:%M:%S"), format="%H:%M")
+  oreg1$Month <- factor(format(oreg1$Date, "%B"), c("August", "September", "October", "November", "December", "January", "February", "March", "April", "May"))
+  oreg2 <- o2[,c("Temp_F", "UTCI_F", "Alias", "closestDateTime")]
+  oreg2$Date <- as.Date(oreg2$closestDateTime, format="%Y-%m-%d")
+  oreg2$Time <- format(strptime(oreg2$closestDateTime, format="%Y-%m-%d %H:%M:%S"), format="%H:%M")
+  oreg2$Month <- factor(format(oreg2$Date, "%B"), c("August", "September", "October", "November", "December", "January", "February", "March", "April", "May")) 
+  
+  ## All days
+  cr1.hourly <- ddply(cr1, c("Time", "Month", "Alias"), summarise, AvgUTCI=mean(UTCI_F, na.rm=TRUE)) #aggregated by date  
+  cr2.hourly <- ddply(cr2, c("Time", "Month", "Alias"), summarise, AvgUTCI=mean(UTCI_F, na.rm=TRUE)) #aggregated by date  
+  o1.hourly <- ddply(oreg1, c("Time", "Month", "Alias"), summarise, AvgTemp=mean(Temp_F, na.rm=TRUE), AvgUTCI=mean(UTCI_F, na.rm=TRUE)) #aggregated by date 
+  o2.hourly <- ddply(oreg2, c("Time", "Month", "Alias"), summarise, AvgTemp=mean(Temp_F, na.rm=TRUE), AvgUTCI=mean(UTCI_F, na.rm=TRUE)) #aggregated by date 
+  
+  cr.hourly <- rbind(cr1.hourly, cr2.hourly)
   cr.hourly <- melt(cr.hourly, id.vars=c("Time", "Month", "Alias"))
-  o.hourly <- melt(o.hourly, id.vars=c("Time", "Month"))
-  o.hourly$Alias <- "Outdoor"
+  
+  if (weatherstation1 == weatherstation2) {
+    o.hourly <- o1.hourly
+    o.hourly$Alias <- paste0(substr(startdate1,1,4), "-", substr(enddate1,3,4))
+  } else { 
+    o1.hourly$Alias <- paste0(substr(startdate1,1,4), "-", substr(enddate1,3,4))
+    o2.hourly$Alias <- paste0(substr(startdate2,1,4), "-", substr(enddate2,3,4))
+    o.hourly <- rbind(o1.hourly, o2.hourly) 
+  }
+  o.hourly <- melt(o.hourly, id.vars=c("Time", "Month", "Alias"))
   
   cro.hourly<- rbind(o.hourly, cr.hourly)
   cro.hourly$Time <- as.POSIXct(cro.hourly$Time, format="%H:%M", tz="UTC")
@@ -128,64 +149,139 @@ classroomcomparison <- function(classroom1, startdate1, enddate1, weatherstation
   
   
   lims <- as.POSIXct(strptime(c("08:00","14:00"), format = "%H:%M"), tz="UTC")    
-  plot.title <- paste0(classroom1, " vs. ", classroom2, " (", format(stdt1, "%b %Y"), "-", format(endt1, "%b %Y"), ")")
+  plot.title <- paste0(classroom1, " vs. ", classroom2, ": (", format(stdt1, "%B"), "-", format(endt1, "%B"), ")")
   plot.subtitle <- "Average School Day UTCI, All Observations"
   
   l1 <- ggplot() + 
     geom_hline(yintercept=min_F, linetype="dotted", color="black", size=0.5) +
     geom_line(data=cro.hourly, aes(x=Time, y=value, linetype=map, group=map, color=map, size=map)) +
-    facet_grid(~Month) +
-    scale_linetype_manual(name = "", values=c("solid","solid", "longdash", "solid")) +
-    scale_size_manual(name="", values=c(0.8, 0.8, 0.5, 0.8)) +
-    scale_color_manual(name = "", values=c("forestgreen", "green", "dimgrey", "dimgrey")) +  
+    facet_grid(~Month, drop=FALSE) +
+    scale_linetype_manual(name = "", values=c("longdash", "solid","longdash", "solid", "solid", "solid")) +
+    scale_size_manual(name="", values=c(0.5, 0.8, 0.5, 0.8, 0.8, 0.8)) +
+    scale_color_manual(name = "", values=c("dimgrey", "dimgrey", "gray70", "gray70", "forestgreen", "green")) +  
     scale_y_continuous(breaks=seq(70,100,5), limits=c(70,100)) +
     scale_x_datetime(breaks=date_breaks("2 hour"), labels=date_format("%H:%M"), limits=lims) +
     ggtitle(bquote(atop(.(plot.title), atop(.(plot.subtitle), "")))) +
     theme_fivethirtyeight() + theme(legend.position="none", text=element_text(size=9))
   
-  ## Obs over 85 - doesn't work!!
-  oHot <- o[o$UTCI>=min_F, c("Date", "Time", "Month", "HST")]
+  ## Obs over 85
+  hot1 <- oreg1[oreg1$UTCI_F>=min_F, c("Date", "Time", "Month")]
+  hot2 <- oreg2[oreg2$UTCI_F>=min_F, c("Date", "Time", "Month")]
   
+  ohot1 <- merge(oreg1, hot1, by=c("Date", "Time", "Month")) #get hot obs using closest time match
+  ohot2 <- merge(oreg2, hot2, by=c("Date", "Time", "Month")) #get hot obs using closest time match
+  crhot1 <- cr1[cr1$DateTime %in% ohot1$closestDateTime, ]
+  crhot2 <- cr2[cr2$DateTime %in% ohot2$closestDateTime, ]
   
-  ## Hottest day
-  hottest <- do.call("rbind", by(o, o$Month, function(x) x[which.max(x$UTCI_F),c("Month", "Date")]))
+  cr1.hourly <- ddply(crhot1, c("Time", "Month", "Alias"), summarise, AvgUTCI=mean(UTCI_F, na.rm=TRUE)) #aggregated by date  
+  cr2.hourly <- ddply(crhot2, c("Time", "Month", "Alias"), summarise, AvgUTCI=mean(UTCI_F, na.rm=TRUE)) #aggregated by date  
+  o1.hourly <- ddply(ohot1, c("Time", "Month", "Alias"), summarise, AvgTemp=mean(Temp_F, na.rm=TRUE), AvgUTCI=mean(UTCI_F, na.rm=TRUE)) #aggregated by date 
+  o2.hourly <- ddply(ohot2, c("Time", "Month", "Alias"), summarise, AvgTemp=mean(Temp_F, na.rm=TRUE), AvgUTCI=mean(UTCI_F, na.rm=TRUE)) #aggregated by date 
+
+  # only include months with 8+ hot timestamps (proxy for 2 consecutive hours)  
+  count1 <- unique(o1.hourly[c("Month", "Time")])
+  count1 <- count1[with(count1, order(Month, Time)), ]
+  counts1 <- ddply(count1, c("Month"), summarize, freq=length(Time))
+  counts1 <- counts1[counts1$freq>=8, ]
   
-  cr.hourly <- merge(cr, hottest, by=c("Date","Month"))
-  o.hourly <- merge(o, hottest, by=c("Date","Month"))
+  count2 <- unique(o2.hourly[c("Month", "Time")])
+  count2 <- count1[with(count2, order(Month, Time)), ]
+  counts2 <- ddply(count2, c("Month"), summarize, freq=length(Time))
+  counts2 <- counts2[counts2$freq>=8, ]
   
-  o.hourly$SchoolDate <- NULL
-  o.hourly$SchoolHour <- NULL
-  o.hourly <- melt(o.hourly, id.vars=c("Date", "Month", "Time"))
-  cr.hourly <- cr.hourly[,c("Date", "Month", "Alias", "UTCI_F", 'Time')]
-  cr.hourly <- melt(cr.hourly, id.vars=c("Date", "Month", "Time", "Alias"))
-  o.hourly$Alias <- "Outdoor"
+  o1.hourly <- merge(o1.hourly, counts1, by=c("Month")) 
+  o2.hourly <- merge(o2.hourly, counts2, by=c("Month")) 
+  cr1.hourly <- merge(cr1.hourly, counts1, by=c("Month")) 
+  cr2.hourly <- merge(cr2.hourly, counts2, by=c("Month")) 
+  
+  cr.hourly <- rbind(cr1.hourly, cr2.hourly)
+  cr.hourly$freq <- NULL
+  cr.hourly <- melt(cr.hourly, id.vars=c("Time", "Month", "Alias"))
+  
+  if (weatherstation1 == weatherstation2) {
+    o1.hourly$Alias <- paste0(substr(startdate1,1,4), "-", substr(enddate1,3,4))
+    o.hourly <- o1.hourly
+  } else { 
+    o1.hourly$Alias <- paste0(substr(startdate1,1,4), "-", substr(enddate1,3,4))
+    o2.hourly$Alias <- paste0(substr(startdate2,1,4), "-", substr(enddate2,3,4))
+    o.hourly <- rbind(o1.hourly, o2.hourly) 
+  }
+  o.hourly$freq <- NULL
+  o.hourly <- melt(o.hourly, id.vars=c("Time", "Month", "Alias"))
   
   cro.hourly<- rbind(o.hourly, cr.hourly)
   cro.hourly$Time <- as.POSIXct(cro.hourly$Time, format="%H:%M", tz="UTC")
   cro.hourly$map <- paste(cro.hourly$Alias, cro.hourly$variable, sep=";")
   
+  plot.title <- ""
+  plot.subtitle <- "Average School Day UTCI, Observations Above 85°F UTCI"
   
+  l2 <- ggplot() + 
+    geom_hline(yintercept=min_F, linetype="dotted", color="black", size=0.5) +
+    geom_line(data=cro.hourly, aes(x=Time, y=value, linetype=map, group=map, color=map, size=map)) +
+    facet_grid(~Month, drop=FALSE) +
+    scale_linetype_manual(name = "", values=c("longdash", "solid","longdash", "solid", "solid", "solid")) +
+    scale_size_manual(name="", values=c(0.5, 0.8, 0.5, 0.8, 0.8, 0.8)) +
+    scale_color_manual(name = "", values=c("dimgrey", "dimgrey", "gray70", "gray70", "forestgreen", "green")) +  
+    scale_y_continuous(breaks=seq(70,100,5), limits=c(70,100)) +
+    scale_x_datetime(breaks=date_breaks("2 hour"), labels=date_format("%H:%M"), limits=lims) +
+    ggtitle(bquote(atop(.(plot.title), atop(.(plot.subtitle), "")))) +
+    theme_fivethirtyeight() + theme(legend.position="none", text=element_text(size=9))
+  
+  ## Hottest day
+  hottest1 <- do.call("rbind", by(oreg1, oreg1$Month, function(x) x[which.max(x$UTCI_F),c("Month", "Date")]))
+  hottest2 <- do.call("rbind", by(oreg2, oreg2$Month, function(x) x[which.max(x$UTCI_F),c("Month", "Date")]))
+  
+  ohottest1 <- merge(oreg1, hottest1, by=c("Date", "Month")) 
+  ohottest2 <- merge(oreg2, hottest2, by=c("Date", "Month")) 
+  crhottest1 <- merge(cr1, hottest1, by=c("Date", "Month")) 
+  crhottest2 <- merge(cr2, hottest2, by=c("Date", "Month")) 
+  
+  cr1.hourly <- ddply(crhottest1, c("Time", "Month", "Alias"), summarise, AvgUTCI=mean(UTCI_F, na.rm=TRUE)) #aggregated by date  
+  cr2.hourly <- ddply(crhottest2, c("Time", "Month", "Alias"), summarise, AvgUTCI=mean(UTCI_F, na.rm=TRUE)) #aggregated by date  
+  o1.hourly <- ddply(ohottest1, c("Time", "Month", "Alias"), summarise, AvgTemp=mean(Temp_F, na.rm=TRUE), AvgUTCI=mean(UTCI_F, na.rm=TRUE)) #aggregated by date 
+  o2.hourly <- ddply(ohottest2, c("Time", "Month", "Alias"), summarise, AvgTemp=mean(Temp_F, na.rm=TRUE), AvgUTCI=mean(UTCI_F, na.rm=TRUE)) #aggregated by date 
+  
+  cr.hourly <- rbind(cr1.hourly, cr2.hourly)
+  cr.hourly <- melt(cr.hourly, id.vars=c("Time", "Month", "Alias"))
+  
+  if (weatherstation1 == weatherstation2) {
+    o1.hourly$Alias <- paste0(substr(startdate1,1,4), "-", substr(enddate1,3,4))
+    o.hourly <- o1.hourly
+  } else { 
+    o1.hourly$Alias <- paste0(substr(startdate1,1,4), "-", substr(enddate1,3,4))
+    o2.hourly$Alias <- paste0(substr(startdate2,1,4), "-", substr(enddate2,3,4))
+    o.hourly <- rbind(o1.hourly, o2.hourly) 
+  }
+  o.hourly <- melt(o.hourly, id.vars=c("Time", "Month", "Alias"))
+  
+  cro.hourly<- rbind(o.hourly, cr.hourly)
+  cro.hourly$Time <- as.POSIXct(cro.hourly$Time, format="%H:%M", tz="UTC")
+  cro.hourly$map <- paste(cro.hourly$Alias, cro.hourly$variable, sep=";")
+
   plot.title <- ""
   plot.subtitle <- "Average School Day UTCI, Hottest Day"
   
   l3 <- ggplot() + 
     geom_hline(yintercept=min_F, linetype="dotted", color="black", size=0.5) +
     geom_line(data=cro.hourly, aes(x=Time, y=value, linetype=map, group=map, color=map, size=map)) +
-    facet_grid(~Month) +
-    scale_linetype_manual(name = "", labels=c(paste0(classroom1, ": UTCI"), paste0(classroom2, ": UTCI"), "Outdoor Temperature", "Outdoor UTCI"), values=c("solid","solid", "longdash", "solid")) +
-    scale_size_manual(name="", values=c(0.8, 0.8, 0.5, 0.8), guide=FALSE) +
-    scale_color_manual(name = "",  values=c("forestgreen", "green", "dimgrey", "dimgrey"), guide=FALSE) +
-    scale_y_continuous(breaks=seq(70,100,5), limits=c(70,100)) +
+    facet_grid(~Month, drop=FALSE) +
+    scale_linetype_manual(name = "", values=c("longdash", "solid","longdash", "solid", "solid", "solid"), guide=FALSE) +
+    scale_size_manual(name="", values=c(0.5, 0.8, 0.5, 0.8, 0.8, 0.8), guide=FALSE) +
+    scale_color_manual(name = "", labels=c(paste0("Outdoor Temperature (", substr(startdate1,1,4), "-", substr(enddate1,3,4), ")"), paste0("Outdoor UTCI (", substr(startdate1,1,4), "-", substr(enddate1,3,4), ")"),
+                                           paste0("Outdoor Temperature (", substr(startdate2,1,4), "-", substr(enddate2,3,4), ")"), paste0("Outdoor UTCI (", substr(startdate2,1,4), "-", substr(enddate2,3,4), ")"),
+                                           paste0(classroom1, ": UTCI"), paste0(classroom2, ": UTCI")),
+                       values=c("dimgrey", "dimgrey", "gray70", "gray70", "forestgreen", "green")) +  
+    scale_y_continuous(breaks=seq(65,100,5), limits=c(65,100)) +
     scale_x_datetime(breaks=date_breaks("2 hour"), labels=date_format("%H:%M"), limits=lims) +
     ggtitle(bquote(atop(.(plot.title), atop(.(plot.subtitle), "")))) +
     theme_fivethirtyeight() + theme(text=element_text(size=9),
                                     legend.title=element_blank(),
-                                    legend.position=c(0.08,0.15), 
+                                    legend.position=c(0.11,0.15), 
                                     legend.background=element_rect(color="grey", fill="#F0F0F0", size=0.4, linetype="solid"), legend.box="horizontal") +
-    guides(linetype = guide_legend(ncol=2, override.aes = list(size=0.5, color=c("forestgreen", "green", "dimgrey", "dimgrey"))))        
+    guides(color = guide_legend(ncol=3, override.aes = list(size=0.5, linetype=c("dashed", "solid","dashed", "solid", "solid", "solid"))))        
   
-  
-  
-  l <- arrangeGrob(l1,l3, layout_matrix=rbind(c(1), c(2)))
+  l <- arrangeGrob(l1,l2,l3, layout_matrix=rbind(c(1), c(2), c(3)))
+  ggsave(filename="~/dropbox/rh1/hidoe/plots/test-comp.pdf", l, width=25, height=16, units="in")
   
 }
