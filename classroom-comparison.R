@@ -112,8 +112,8 @@ classroomcomparison <- function(classroom1, startdate1, enddate1, weatherstation
   ### line plots ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
   reg1 <- data.frame(DateTime=seq(from=as.POSIXct(paste(stdt1, "08:00")), by=15*60, to=as.POSIXct(paste(endt1, "14:00"))))
   reg2 <- data.frame(DateTime=seq(from=as.POSIXct(paste(stdt2, "08:00")), by=15*60, to=as.POSIXct(paste(endt2, "14:00"))))
-  o1$closestDateTime <- reg1$DateTime[ findInterval(o1$DateTime, c(-Inf, head(reg$DateTime,-1)) + c(0, diff(as.numeric(reg$DateTime))/2 )) ]
-  o1$closestDateTime <- reg$DateTime[ findInterval(o$DateTime, c(-Inf, head(reg$DateTime,-1)) + c(0, diff(as.numeric(reg$DateTime))/2 )) ]
+  o1$closestDateTime <- reg1$DateTime[ findInterval(o1$DateTime, c(-Inf, head(reg1$DateTime,-1)) + c(0, diff(as.numeric(reg1$DateTime))/2 )) ]
+  o2$closestDateTime <- reg2$DateTime[ findInterval(o2$DateTime, c(-Inf, head(reg2$DateTime,-1)) + c(0, diff(as.numeric(reg2$DateTime))/2 )) ]
   ## All days
   cr.hourly <- ddply(cr, c("Time", "Month", "Alias"), summarize, AvgUTCI=mean(UTCI_F, na.rm=TRUE))
   o.hourly <- ddply(o, c("Time", "Month"), summarize, AvgTemp=mean(Temp_F, na.rm=TRUE), AvgUTCI=mean(UTCI_F, na.rm=TRUE))
