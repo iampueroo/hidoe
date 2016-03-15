@@ -99,7 +99,7 @@ classroomcomparison <- function(classroom1, startdate1, enddate1, weatherstation
     scale_size_manual(name="", values=c(0.5, 0.8, 0.5, 0.8, 0.8, 0.8, 0.8, 0.8), guide=FALSE) +
     scale_shape_manual(name="", labels=c(paste(classroom1, "(Maximum UTCI)"), paste(classroom2, "(Maximum UTCI)")), values=rep(16, times=6)) +
     scale_y_continuous(breaks=seq(60,110,5), limits=c(min(cro.daily$value), max(cro.daily$value))) + 
-    scale_x_date(date_breaks="1 month", date_labels="%b %Y") + 
+    scale_x_date(date_breaks="1 month", date_labels="%b-%d") + 
     ggtitle(bquote(atop(.(plot.title), atop(.(plot.subtitle), "")))) +
     theme_fivethirtyeight() +
     theme(text=element_text(size=9), legend.title=element_blank(), legend.position=c(0.28,0.08), legend.background=element_rect(color="grey", fill="#F0F0F0", size=0.4, linetype="solid"), legend.box="horizontal") +
