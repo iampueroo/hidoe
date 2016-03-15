@@ -113,7 +113,7 @@ classroomplot <- function(classroom, weatherstation, startdate, enddate) {
      ggtitle(bquote(atop(.(plot.title), atop(.(plot.subtitle), "")))) +
      theme_fivethirtyeight() + theme(legend.position="none", text=element_text(size=9))
    
-   ## Obs over 85 - doesn't work!!
+   ## Obs over 85 
    hot <- oreg[oreg$UTCI_F>=min_F, c("Date", "Time", "Month")]
    
    ohot <- merge(oreg, hot, by=c("Date", "Time", "Month")) #get hot obs using closest time match
