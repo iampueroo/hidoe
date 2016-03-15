@@ -185,7 +185,7 @@ classroomcomparison <- function(classroom1, startdate1, enddate1, weatherstation
   counts1 <- counts1[counts1$freq>=8, ]
   
   count2 <- unique(o2.hourly[c("Month", "Time")])
-  count2 <- count1[with(count2, order(Month, Time)), ]
+  count2 <- count2[with(count2, order(Month, Time)), ]
   counts2 <- ddply(count2, c("Month"), summarize, freq=length(Time))
   counts2 <- counts2[counts2$freq>=8, ]
   
