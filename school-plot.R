@@ -51,7 +51,7 @@
     cr$DateTime <- as.POSIXct(paste(cr$Date, cr$Time), format="%Y-%m-%d %H:%M")
     
     #remove AC rooms
-    cr <- cr[cr$AC==0,]
+    #cr <- cr[cr$AC==0,]
     cr$AC <- NULL
     cr$RoomID <- NULL
     
