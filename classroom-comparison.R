@@ -23,6 +23,7 @@ classroomcomparison <- function(classroom1, startdate1, enddate1, weatherstation
   o$Time <- format(strptime(o$Time, format="%H:%M"), format="%H:%M")
   o$Month <- factor(format(o$Date, "%B"), c("August", "September", "October", "November", "December", "January", "February", "March", "April", "May"))
   o$Day <- format(o$Date, "%m-%d")
+  o$DateTime <- as.POSIXct(paste(o$Date, o$Time), format="%Y-%m-%d %H:%M")
   o1 <- o[o$Alias==weatherstation1,]
   o2 <- o[o$Alias==weatherstation2,]
   o1 <- o1[o1$Date >= stdt1 & o1$Date <= endt1, ]
@@ -35,6 +36,7 @@ classroomcomparison <- function(classroom1, startdate1, enddate1, weatherstation
   cr <- merge(cr, arch[,c("RoomID", "Alias")], by="RoomID", all.x=TRUE) #get room alias 
   cr$RoomID <- NULL
   cr$Day <- format(cr$Date, "%m-%d")
+  cr$DateTime <- as.POSIXct(paste(cr$Date, cr$Time), format="%Y-%m-%d %H:%M")
   cr1 <- cr[cr$Alias==classroom1,] #restrict to classroom specified
   cr2 <- cr[cr$Alias==classroom2,] #restrict to classroom specified
   cr1 <- cr1[cr1$Date >= stdt1 & cr1$Date <= endt1, ]
@@ -43,7 +45,8 @@ classroomcomparison <- function(classroom1, startdate1, enddate1, weatherstation
   # restrict to school hour/dates ------------------------------------------------------------------------------------------------------------------------------------------------------------------
   cr1 <- cr1[cr1$SchoolDate==1 & cr1$SchoolHour==1,]
   cr2 <- cr2[cr2$SchoolDate==1 & cr2$SchoolHour==1,]
-  
+  o1 <- o1[o1$SchoolDate==1 & o1$SchoolHour==1,]
+  o2 <- o2[o2$SchoolDate==1 & o2$SchoolHour==1,]
   
   cr1.daily <- ddply(cr1, c("Date", "Day", "Alias"), summarise, MaxUTCI=max(UTCI_F, na.rm=TRUE), AvgUTCI=mean(UTCI_F, na.rm=TRUE)) #aggregated by date  
   cr2.daily <- ddply(cr2, c("Date", "Day", "Alias"), summarise, MaxUTCI=max(UTCI_F, na.rm=TRUE), AvgUTCI=mean(UTCI_F, na.rm=TRUE)) #aggregated by date  
@@ -107,6 +110,10 @@ classroomcomparison <- function(classroom1, startdate1, enddate1, weatherstation
            shape = guide_legend(ncol=1, override.aes = list(alpha=c(0.8,0.8), color=c("firebrick", "#FC4F30"))))
   
   ### line plots ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  reg1 <- data.frame(DateTime=seq(from=as.POSIXct(paste(stdt1, "08:00")), by=15*60, to=as.POSIXct(paste(endt1, "14:00"))))
+  reg2 <- data.frame(DateTime=seq(from=as.POSIXct(paste(stdt2, "08:00")), by=15*60, to=as.POSIXct(paste(endt2, "14:00"))))
+  o1$closestDateTime <- reg1$DateTime[ findInterval(o1$DateTime, c(-Inf, head(reg$DateTime,-1)) + c(0, diff(as.numeric(reg$DateTime))/2 )) ]
+  o1$closestDateTime <- reg$DateTime[ findInterval(o$DateTime, c(-Inf, head(reg$DateTime,-1)) + c(0, diff(as.numeric(reg$DateTime))/2 )) ]
   ## All days
   cr.hourly <- ddply(cr, c("Time", "Month", "Alias"), summarize, AvgUTCI=mean(UTCI_F, na.rm=TRUE))
   o.hourly <- ddply(o, c("Time", "Month"), summarize, AvgTemp=mean(Temp_F, na.rm=TRUE), AvgUTCI=mean(UTCI_F, na.rm=TRUE))
