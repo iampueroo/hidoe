@@ -177,7 +177,7 @@ classroomplot <- function(classroom, weatherstation, startdate, enddate) {
      geom_line(data=cr.hourly, aes(x=Time, y=value, color=variable), size=0.8, alpha=0.5, group=1) +
      geom_line(data=o.hourly, aes(x=Time, y=value, linetype=variable, size=variable, group=variable), color="dimgrey") +
      facet_grid(~Month, drop=FALSE) +
-     scale_y_continuous(breaks=seq(70,100,5), limits=c(70,100)) +
+     scale_y_continuous(breaks=seq(65,100,5), limits=c(65,100)) +
      scale_color_manual(name="", labels=c(paste0(classroom, " UTCI")),values=c("forestgreen")) +
      scale_size_manual(name="", values=c(0.5,0.8), guide=FALSE) +
      scale_linetype_manual(name = "", labels=c("Outdoor Temperature", "Outdoor UTCI"), values=c("longdash","solid")) +
