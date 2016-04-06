@@ -10,8 +10,6 @@ districtchart <- function(clustervar, clustervalue) {
   
   # Static variables
   min.temp <- 85
-  
-  colorsHeat <- c("#E69720", "#FC4F30", "#E8E827") 
 
   # Input data
   setwd("~/BOX Sync/HIDOE-Data-Repository/Processed/") 
@@ -44,7 +42,8 @@ districtchart <- function(clustervar, clustervalue) {
   summer <- tbl_df(data.frame(Month=c("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"))) %>% mutate(Month = factor(Month, Month))  #manipulations for plotting
   
   plot.subtitle <- "Universal Thermal Climate Index Profile"
-  plot.title <- paste0("HIDOE ", sub("(.)", ("\\U\\1"), tolower(clustervar), pe=TRUE), ": ", clustervalue)
+  plot.title <- paste0("HIDOE ", clustervar, ": ", clustervalue)
+  
   
   gg <- ggplot() +
     geom_rect(data = summer[summer$Month %in% c("June", "July"),], xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf, fill="dimgrey", alpha=0.2) +
@@ -63,7 +62,7 @@ districtchart <- function(clustervar, clustervalue) {
           strip.text.x = element_text(size = rel(1.1), color="gray30"))
   
   
-  ggsave(filename=paste0("~/dropbox/rh1/hidoe/plots/hidoe-", clustervar, "-", clustervalue, ".pdf"), gg, width=30, height=16, units="in")
+  ggsave(filename=paste0("~/dropbox/rh1/hidoe/plots/hidoe-", tolower(clustervar), "-", tolower(clustervalue), ".pdf"), gg, width=30, height=16, units="in")
   
 }    
 
