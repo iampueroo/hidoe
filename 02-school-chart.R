@@ -152,7 +152,7 @@ schoolchart <- function(school, start, end) {
           strip.text.x = element_text(size = rel(1.1), color="gray30"))
   
   gg3 <- direct.label.ggplot(gg3, list("last.qp", cex=0.7))
-  ggsave(filename=paste0("~/dropbox/rh1/hidoe/plots/", tolower(gsub(" ", "-", school)), "-profilea-hot-months.pdf"), gg3, width=30, height=16, units="in")
+  ggsave(filename=paste0("~/dropbox/rh1/hidoe/plots/", tolower(gsub(" ", "-", school)), "-profile-hot-months.pdf"), gg3, width=30, height=16, units="in")
   
   
   
