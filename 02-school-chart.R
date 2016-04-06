@@ -15,8 +15,9 @@ schoolchart <- function(school, start, end) {
   
   # Static variables
   min.temp <- 85
-  start.date <- as.Date(start, format="%m-%d-%Y")
-  end.date <- as.Date(end, format="%m-%d-%Y")
+  start.date <- as.Date(as.character(start), format="%m-%d-%Y")
+  end.date <- as.Date(as.character(end), format="%m-%d-%Y")
+  school <- as.character(school)
   
   # Input data
   sheets <- gs_ls() #google sheets
@@ -83,9 +84,9 @@ schoolchart <- function(school, start, end) {
  
   #calculate heat index based on maximum value
   stats <- o.hourly %>% group_by(Month) %>% summarize(stddev=sd(value, na.rm=TRUE), avg=mean(value, na.rm=TRUE))
-  outliers <- cr.hourly %>% group_by(Alias, Month) %>% summarize(max=max(value, na.rm=TRUE))
+  outliers <- cr.hourly %>% group_by(Alias, Month) %>% summarize(av=mean(value, na.rm=TRUE))
   outliers <- inner_join(outliers, stats, by="Month")
-  outliers$index <- ifelse(outliers$max >= outliers$avg+2*outliers$stddev, 1, ifelse(outliers$max >= outliers$avg+outliers$stddev, 2, 3))
+  outliers$index <- ifelse(outliers$av >= outliers$avg+2*outliers$stddev, 1, ifelse(outliers$av >= outliers$avg+1.5*outliers$stddev, 2, 3))
   outliers <- outliers %>% group_by(Alias) %>% summarize(ind=as.character(min(index), na.rm=TRUE))
   grps <- split(outliers, outliers$ind)
   gr1 <- as.vector(grps[["1"]]$Alias)
