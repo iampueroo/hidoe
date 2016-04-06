@@ -18,31 +18,6 @@ schoolchart <- function(school, start, end) {
   start.date <- as.Date(start, format="%m-%d-%Y")
   end.date <- as.Date(end, format="%m-%d-%Y")
   
-  colors <- rep(c("#114B5F", "#028090", "#C6EAB2", "#456990", "#F45B69"), times=10)
-  colors2 <- rep(c("#247BA0", "#70C1B3", "#B2DBBF", "#F3FFBD", "#FF1654"), times=10)
-  colors3 = c(
-    "#FFB300", # Vivid Yellow
-    "#803E75", # Strong Purple
-    "#FF6800", # Vivid Orange
-    "#A6BDD7", # Very Light Blue
-    "#C10020", # Vivid Red
-    "#CEA262", # Grayish Yellow
-    "#817066", # Medium Gray
-    "#007D34", # Vivid Green
-    "#F6768E", # Strong Purplish Pink
-    "#00538A", # Strong Blue
-    "#FF7A5C", # Strong Yellowish Pink
-    "#53377A", # Strong Violet
-    "#FF8E00", # Vivid Orange Yellow
-    "#B32851", # Strong Purplish Red
-    "#F4C800", # Vivid Greenish Yellow
-    "#7F180D", # Strong Reddish Brown
-    "#93AA00", # Vivid Yellowish Green
-    "#593315", # Deep Yellowish Brown
-    "#F13A13", # Vivid Reddish Orange
-    "#232C16" # Dark Olive Green
-  )
-  
   # Input data
   sheets <- gs_ls() #google sheets
   gs <- gs_title("MASTER-sensor-weather-deployment") %>% gs_read(ws = "site-list") 
@@ -54,14 +29,14 @@ schoolchart <- function(school, start, end) {
   colnames(o.old) <- c("Datetime_HST", "Temp_F", "UTCI_F", "WS_ID")
   o.old$Date <- as.Date(o.old$Datetime_HST, format="%m/%d/%y")
   o.old$Time <- format(strptime(o.old$Datetime_HST, format="%m/%d/%y %H:%M"), format="%H:%M")
-  o.old$Month <- factor(format(o.old$Date, "%B"), c("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"))
+  o.old$Month <- factor(format(o.old$Date, "%B"), c("August", "September", "October", "November", "December", "January", "February", "March", "April", "May", "June", "July"))
   o.old$Datetime_HST <- as.POSIXct(paste(o.old$Date, o.old$Time), format="%Y-%m-%d %H:%M")
   o.old <- o.old[o.old$Date<=as.Date("2014-10-17"),] #use old weather station only for pilot date range
   
   o.new <- read_csv(file="~/BOX Sync/HIDOE-Data-Repository/Raw/Weather-Station/20160404-master-weather.csv") #new outdoor
   o.new$Date <- as.Date(o.new$Date_HST, format="%Y-%m-%d")
   o.new$Time <- format(strptime(o.new$Time_HST, format="%Y-%m-%d %H:%M:%S"), format="%H:%M")
-  o.new$Month <- factor(format(o.new$Date, "%B"), c("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"))
+  o.new$Month <- factor(format(o.new$Date, "%B"), c("August", "September", "October", "November", "December", "January", "February", "March", "April", "May", "June", "July"))
   o.new$Datetime_HST <- as.POSIXct(paste(o.new$Date, o.new$Time), format="%Y-%m-%d %H:%M")
   o.new <- temp2utci(o.new, "Temp_F", "RH", "Windspeed") #calculate UTCI
   o.new <- o.new[o.new$WS_ID==ws, c("Datetime_HST", "Temp_F", "UTCI_F", "WS_ID", "Date", "Time", "Month")]
@@ -76,7 +51,7 @@ schoolchart <- function(school, start, end) {
   cr <- temp2utci(cr, "Temp_F", "RH", "windspeed") #calculate UTCI
   cr$Date <- as.Date(cr$Datetime_HST, format="%m/%d/%y")
   cr$Time <- format(strptime(cr$Datetime_HST, format="%m/%d/%y %I:%M:%S %p"), format="%H:%M")
-  cr$Month <- factor(format(cr$Date, "%B"), c("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"))
+  cr$Month <- factor(format(cr$Date, "%B"), c("August", "September", "October", "November", "December", "January", "February", "March", "April", "May", "June", "July"))
   cr$Datetime_HST <- as.POSIXct(paste(cr$Date, cr$Time), format="%Y-%m-%d %H:%M")
   cr$Alias <- as.factor(sub(".*- (.*)", "\\1", cr$Alias))
   
@@ -101,37 +76,46 @@ schoolchart <- function(school, start, end) {
   o.int <- o[,c("Temp_F", "UTCI_F", "closestDatetime")]
   o.int$Date <- as.Date(o.int$closestDatetime, format="%Y-%m-%d")
   o.int$Time <- format(strptime(o.int$closestDatetime, format="%Y-%m-%d %H:%M:%S"), format="%H:%M")
-  o.int$Month <- factor(format(o.int$Date, "%B"), c("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"))
+  o.int$Month <- factor(format(o.int$Date, "%B"), c("August", "September", "October", "November", "December", "January", "February", "March", "April", "May", "June", "July"))
   
   cr.hourly <- cr %>% group_by(Alias, Time, Month) %>% summarise(avgUTCI=mean(UTCI_F, na.rm=TRUE)) %>% gather(variable, value, -Alias, -Time, -Month)
-  o.hourly <- o.int %>% group_by(Time, Month) %>% summarize(avgTemp=mean(Temp_F, na.rm=TRUE), avgUTCI=mean(UTCI_F, na.rm=TRUE)) %>% gather(variable, value, -Time, -Month)
-  
+  o.hourly <- o.int %>% group_by(Time, Month) %>% summarize(avgUTCI=mean(UTCI_F, na.rm=TRUE)) %>% gather(variable, value, -Time, -Month)
+ 
+  #calculate heat index based on maximum value
+  stats <- o.hourly %>% group_by(Month) %>% summarize(stddev=sd(value, na.rm=TRUE), avg=mean(value, na.rm=TRUE))
+  outliers <- cr.hourly %>% group_by(Alias, Month) %>% summarize(max=max(value, na.rm=TRUE))
+  outliers <- inner_join(outliers, stats, by="Month")
+  outliers$index <- ifelse(outliers$max >= outliers$avg+2*outliers$stddev, 1, ifelse(outliers$max >= outliers$avg+outliers$stddev, 2, 3))
+  outliers <- outliers %>% group_by(Alias) %>% summarize(ind=as.character(min(index), na.rm=TRUE))
+  grps <- split(outliers, outliers$ind)
+  gr1 <- as.vector(grps[["1"]]$Alias)
+  gr2 <- as.vector(grps[["2"]]$Alias)
+  gr3 <- as.vector(grps[["3"]]$Alias)
+  cr.hourly <- inner_join(cr.hourly, outliers, by="Alias")
   
   #manipulations for plotting
-  summer <- tbl_df(data.frame(Month=c("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"))) %>% mutate(Month = factor(Month, Month))
+  summer <- tbl_df(data.frame(Month=c("August", "September", "October", "November", "December", "January", "February", "March", "April", "May", "June", "July"))) %>% mutate(Month = factor(Month, Month))
   o.hourly$Time <- as.POSIXct(o.hourly$Time, format="%H:%M", tz="UTC")
   cr.hourly$Time <- as.POSIXct(cr.hourly$Time, format="%H:%M", tz="UTC")
-  lims <- as.POSIXct(strptime(c("00:00","23:50"), format = "%H:%M"), tz="UTC")
-  lims[2] <- lims[2] + 2.8*60*60 #add hours to make space for labels
- 
+  lims <- ggtime(c("0:00", "23:59"))
+  lims[2] <- lims[2] + 3*60*60 #add hours to make space for labels
+  bks <- ggtime(c("0:00", "02:00", "04:00", "06:00", "08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "16:00", "18:00", "20:00", "22:00", "23:59:99"))
+  labs <- c("0:00", rep("", 3), "8:00", rep("", 5), "14:00", rep("", 4), "24:00")
+  cr.hourly$Alias <- factor(cr.hourly$Alias, c(gr1, gr2, gr3))
+  
+  
   plot.title <- school.name
   plot.subtitle <- paste0("Universal Thermal Climate Index Profile", " (", start, " to ", end, ")")
- 
-  #if (("June" %in% unique(cr.hourly$Month)) & ("July" %in% unique(cr.hourly$Month))) {
-  # gg <- ggplot() +  geom_rect(data = months, xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf, fill="dimgrey", alpha=0.2) 
-  #} else {
-  #  gg <- ggplot() 
-  #}
    
   gg <- ggplot() +  
-    geom_rect(data = summer[summer$Month %in% c("June", "July"),], xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf, fill="dimgrey", alpha=0.2) +
+    geom_rect(data = summer[summer$Month %in% c("June", "July"),], xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf, fill="gray70", alpha=0.1) +
     geom_hline(yintercept=min.temp, linetype="dotted", color="black", size=0.5) +
-    geom_line(data=o.hourly, aes(x=Time, y=value, linetype=variable), color="dimgrey", alpha=0.6, size=0.8) +
-    geom_line(data=cr.hourly, aes(x=Time, y=value, color=Alias, group=Alias), size=0.5, alpha=0.6) +
+    geom_line(data=o.hourly, aes(x=Time, y=value), color="dimgrey", alpha=0.6, size=0.7) +
+    geom_line(data=cr.hourly, aes(x=Time, y=value, group=Alias, color=Alias), size=0.4, alpha=0.6) + 
     facet_wrap(~Month, drop=FALSE, ncol=12) +
-    scale_y_continuous(breaks=seq(60,100,5), limits=c(65,95)) +
-    scale_x_datetime(breaks=date_breaks("6 hour"), labels=date_format("%H:%M"), limits=lims) +
-    scale_color_manual(values= colorRampPalette(brewer.pal(11,"Spectral"))(length(unique(cr.hourly$Alias)))) +
+    scale_color_manual(name="", values=c(rep("#FC4F30", times=length(gr1)), rep("#E69720", times=length(gr2)), rep("royalblue1", times=length(gr3)))) + 
+    scale_y_continuous(breaks=seq(60,100,5), limits=c(65,100)) +
+    scale_x_datetime(breaks=bks, labels=labs, limits=lims) +
     ggtitle(bquote(atop(.(plot.title), atop(.(plot.subtitle), "")))) +
     labs(x=NULL, y=NULL) +
     theme_bw(base_family="sans") +
@@ -141,39 +125,39 @@ schoolchart <- function(school, start, end) {
           plot.margin = unit(c(2, 2, 2, 2), "lines"), 
           strip.text.x = element_text(size = rel(1.1), color="gray30"))
   
-  gg <- direct.label.ggplot(gg, list("last.qp", cex=0.68))
-  ggsave(filename=paste0("~/dropbox/rh1/hidoe/plots/avg-daily-", tolower(gsub(" ", "-", school)), ".pdf"), gg, width=30, height=16, units="in")
+  gg <- direct.label.ggplot(gg, list("last.qp", cex=0.7))
+  ggsave(filename=paste0("~/dropbox/rh1/hidoe/plots/", tolower(gsub(" ", "-", school)), "-profile.pdf"), gg, width=30, height=16, units="in")
   
-  #UTCI Difference
-  cro <- inner_join(cr, o.int[,c("closestDatetime", "UTCI_F")], by=c("Datetime_HST" = "closestDatetime"))
-  cro <- cro %>% mutate(UTCIdiff_F=UTCI_F.x-UTCI_F.y)
+  o.hourly <- o.hourly[o.hourly$Month %in% c("August", "September", "October"), ]
+  o.hourly$Month <- factor(o.hourly$Month, c("August", "September", "October"))
+  cr.hourly <- cr.hourly[cr.hourly$Month %in% c("August", "September", "October"), ]
+  cr.hourly$Month <- factor(cr.hourly$Month, c("August", "September", "October"))
   
-  diff.hourly <- cro %>% group_by(Alias, Time, Month) %>% summarise(avgdiff=mean(UTCIdiff_F, na.rm=TRUE)) %>% gather(variable, value, -Alias, -Time, -Month)
-  diff.hourly$Time <- as.POSIXct(diff.hourly$Time, format="%H:%M", tz="UTC")
+  gg3 <- ggplot() +  
+    geom_hline(yintercept=min.temp, linetype="dotted", color="black", size=0.5) +
+    geom_line(data=o.hourly, aes(x=Time, y=value), color="dimgrey", alpha=0.6, size=0.7) +
+    geom_line(data=cr.hourly, aes(x=Time, y=value, group=Alias, color=Alias), size=0.4, alpha=0.6) + 
+    facet_wrap(~Month, drop=FALSE, ncol=3) +
+    scale_color_manual(name="", values=c(rep("#FC4F30", times=length(gr1)), rep("#E69720", times=length(gr2)), rep("royalblue1", times=length(gr3)))) + 
+    scale_y_continuous(breaks=seq(60,100,5)) +
+    scale_x_datetime(breaks=bks, labels=labs, limits=lims) +
+    ggtitle(bquote(atop(.(plot.title), atop(.(plot.subtitle), "")))) +
+    labs(x=NULL, y=NULL) +
+    theme_bw(base_family="sans") +
+    theme(axis.ticks=element_blank(), legend.position="none", panel.border=element_blank(), legend.key=element_blank(),
+          text=element_text(color="gray30"),
+          plot.title = element_text(hjust = 0, size = rel(1.5), face = "bold"), strip.background=element_blank(),
+          plot.margin = unit(c(2, 2, 2, 2), "lines"), 
+          strip.text.x = element_text(size = rel(1.1), color="gray30"))
   
-  #ggdiff <- ggplot() + 
-  #  geom_rect(data = months, xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf, fill="dimgrey", alpha=0.2) +
-  #  geom_hline(yintercept=0, linetype="dotted", color="black", size=0.5) +
-  #  geom_line(data=diff.hourly, aes(x=Time, y=value, color=Alias, group=Alias), size=0.5, alpha=0.6) +
-  #  facet_wrap(~Month, drop=FALSE, ncol=12) +
-  #  scale_y_continuous(breaks=seq(-15,15,5), limits=c(-15,15)) +
-  #  scale_x_datetime(breaks=date_breaks("6 hour"), labels=date_format("%H:%M"), limits=lims) +
-  #  scale_color_manual(values= colorRampPalette(brewer.pal(11,"Spectral"))(length(unique(diff.hourly$Alias)))) +
-  #  ggtitle(bquote(atop(.(plot.title), atop(.(plot.subtitle), "")))) +
-  #  labs(x=NULL, y=NULL) +
-  #  theme_bw(base_family="sans") +
-  #  theme(axis.ticks=element_blank(), legend.position="none", panel.border=element_blank(), legend.key=element_blank(),
-  #        text=element_text(color="gray30"),
-  #        plot.title = element_text(hjust = 0, size = rel(1.5), face = "bold"), strip.background=element_blank(),
-  #        plot.margin = unit(c(2, 2, 2, 2), "lines"), 
-  #        strip.text.x = element_text(size = rel(1.1), color="gray30"))
+  gg3 <- direct.label.ggplot(gg3, list("last.qp", cex=0.7))
+  ggsave(filename=paste0("~/dropbox/rh1/hidoe/plots/", tolower(gsub(" ", "-", school)), "-profilea-hot-months.pdf"), gg3, width=30, height=16, units="in")
   
-  #ggdiff <- direct.label.ggplot(ggdiff, list("last.qp", cex=0.45))
-  #ggsave(filename=paste0("~/dropbox/rh1/hidoe/plots/avg-daily-diff", tolower(gsub(" ", "-", school)), ".pdf"), ggdiff, width=30, height=16, units="in")
+  
+  
   
   
   #http://www.r-bloggers.com/coloring-and-drawing-outside-the-lines-in-ggplot/
-  #https://coolors.co/app/114b5f-028090-c6eab2-456990-f45b69
   
 }    
 
@@ -405,4 +389,7 @@ temp2utci <- function(df, temp, rh, wind) {
   tempdata <- tempdata %>% mutate(utcif=(f1+f2+f3+f4+f5+f6+f7+f8+f9)*(9/5)+32)   
   df$UTCI_F <- tempdata$utcif
   return(df)
+}
+ggtime <- function(time) {
+  as.POSIXct(strptime(time, format = "%H:%M"), tz="UTC")
 }
