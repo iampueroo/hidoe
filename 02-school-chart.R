@@ -82,7 +82,7 @@ schoolchart <- function(school, start, end) {
   cr.hourly <- cr %>% group_by(Alias, Time, Month) %>% summarise(avgUTCI=mean(UTCI_F, na.rm=TRUE)) %>% gather(variable, value, -Alias, -Time, -Month)
   o.hourly <- o.int %>% group_by(Time, Month) %>% summarize(avgUTCI=mean(UTCI_F, na.rm=TRUE)) %>% gather(variable, value, -Time, -Month)
  
-  #calculate heat index based on maximum value
+  #calculate heat index  
   stats <- o.hourly %>% group_by(Month) %>% summarize(stddev=sd(value, na.rm=TRUE), avg=mean(value, na.rm=TRUE))
   outliers <- cr.hourly %>% group_by(Alias, Month) %>% summarize(av=mean(value, na.rm=TRUE))
   outliers <- inner_join(outliers, stats, by="Month")
