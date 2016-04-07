@@ -15,9 +15,8 @@ schoolchart <- function(school, start, end) {
   
   # Static variables
   min.temp <- 85
-  start.date <- as.Date(as.character(start), format="%m-%d-%Y")
-  end.date <- as.Date(as.character(end), format="%m-%d-%Y")
-  school <- as.character(school)
+  start.date <- as.Date(start, format="%m-%d-%Y")
+  end.date <- as.Date(end, format="%m-%d-%Y")
   
   # Input data
   sheets <- gs_ls() #google sheets
@@ -115,7 +114,7 @@ schoolchart <- function(school, start, end) {
     geom_line(data=cr.hourly, aes(x=Time, y=value, group=Alias, color=Alias), size=0.4, alpha=0.6) + 
     facet_wrap(~Month, drop=FALSE, ncol=12) +
     scale_color_manual(name="", values=c(rep("#FC4F30", times=length(gr1)), rep("#E69720", times=length(gr2)), rep("royalblue1", times=length(gr3)))) + 
-    scale_y_continuous(breaks=seq(60,100,5), limits=c(65,100)) +
+    scale_y_continuous(breaks=seq(60,110,5), limits=c(65,100), labels=ggdeg(seq(60,110,5))) +
     scale_x_datetime(breaks=bks, labels=labs, limits=lims) +
     ggtitle(bquote(atop(.(plot.title), atop(.(plot.subtitle), "")))) +
     labs(x=NULL, y=NULL) +
@@ -140,7 +139,7 @@ schoolchart <- function(school, start, end) {
     geom_line(data=cr.hourly, aes(x=Time, y=value, group=Alias, color=Alias), size=0.4, alpha=0.6) + 
     facet_wrap(~Month, drop=FALSE, ncol=3) +
     scale_color_manual(name="", values=c(rep("#FC4F30", times=length(gr1)), rep("#E69720", times=length(gr2)), rep("royalblue1", times=length(gr3)))) + 
-    scale_y_continuous(breaks=seq(60,100,5)) +
+    scale_y_continuous(breaks=seq(60,110,5), labels=ggdeg(seq(60,110,5))) +
     scale_x_datetime(breaks=bks, labels=labs, limits=lims) +
     ggtitle(bquote(atop(.(plot.title), atop(.(plot.subtitle), "")))) +
     labs(x=NULL, y=NULL) +
@@ -393,4 +392,7 @@ temp2utci <- function(df, temp, rh, wind) {
 }
 ggtime <- function(time) {
   as.POSIXct(strptime(time, format = "%H:%M"), tz="UTC")
+}
+ggdeg <- function(x) {
+  parse(text = paste(x, "*degree", sep = ""))
 }
