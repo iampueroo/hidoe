@@ -1,4 +1,4 @@
-districtchart <- function(clustervar, clustervalue) {
+clusterchart <- function(clustervar, clustervalue) {
   
   library(readxl)
   library(readr)
@@ -20,7 +20,7 @@ districtchart <- function(clustervar, clustervalue) {
   cr <- temp2utci(cr, "Temp_F", "RH", "windspeed") #calculate UTCI
   cr$Date <- as.Date(cr$Datetime_HST, format="%m/%d/%y")
   cr$Time <- format(strptime(cr$Datetime_HST, format="%m/%d/%y %I:%M:%S %p"), format="%H:%M")
-  cr$Month <- factor(format(cr$Date, "%B"), c("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"))
+  cr$Month <- factor(format(cr$Date, "%B"), c("August", "September", "October", "November", "December", "January", "February", "March", "April", "May", "June", "July"))
   cr$Datetime_HST <- as.POSIXct(paste(cr$Date, cr$Time), format="%Y-%m-%d %H:%M")
   cr$School <- sub("(.*) -.*", "\\1", cr$Alias)
   
@@ -30,39 +30,84 @@ districtchart <- function(clustervar, clustervalue) {
   
   # Restrictions
   cr <- cr[complete.cases((cr)),]
-  cr <- inner_join(cr, site[,c("School", clustervar)], by="School") %>% filter_(., interp(~var==clustervalue, var=as.name(clustervar)))
+  s <- inner_join(cr, site[,c("School", clustervar)], by="School") %>% filter_(., interp(~var==clustervalue, var=as.name(clustervar)))
   
   ### Plot 
   ## UTCI
   
-  meds <- cr %>% group_by(School, Month) %>% summarise(median=median(UTCI_F, na.rm=TRUE)) 
+  #calculate heat index  
+  meds <- s %>% group_by(School, Month) %>% summarise(median=median(UTCI_F, na.rm=TRUE)) 
   meds$index <- ifelse(meds$median>min.temp, "1", "2")
-  cr <- inner_join(cr, meds[,c("School", "Month", "index")], by=c("School", "Month"))
+  meds <- meds %>% group_by(School) %>% summarise(index=min(as.character(index), na.rm=TRUE))
+  s <- inner_join(s, meds[,c("School", "index")], by=c("School"))
   
-  summer <- tbl_df(data.frame(Month=c("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"))) %>% mutate(Month = factor(Month, Month))  #manipulations for plotting
+  #manipulations for plotting
+  summer <- tbl_df(data.frame(Month=c("August", "September", "October", "November", "December", "January", "February", "March", "April", "May", "June", "July"))) %>% mutate(Month = factor(Month, Month))  #manipulations for plotting
   
   plot.subtitle <- "Universal Thermal Climate Index Profile"
   plot.title <- paste0("HIDOE ", clustervar, ": ", clustervalue)
   
+  #school x month
+  #gg <- ggplot() +
+  #  geom_rect(data = summer[summer$Month %in% c("June", "July"),], xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf, fill="gray70", alpha=0.1) +
+  #  geom_hline(yintercept=min.temp, linetype="dotted", color="black", size=0.5) +
+  #  geom_boxplot(data=s, aes(x=School, y=UTCI_F, color=index, fill=index), alpha=0.5, outlier.colour = "transparent", show.legend = FALSE) + #school x month
+  #  facet_grid(~Month, drop=FALSE) + #school x month
+  #  scale_y_continuous(breaks=seq(55,110,5), limits=c(55,110), labels=ggdeg(seq(55,110,5))) +
+  #  scale_color_manual(name="", values=c("2"="royalblue1", "1"="#FC4F30")) +
+  #  scale_fill_manual(name="", values=c("2"="royalblue1", "1"="#FC4F30")) +
+  #  ggtitle(bquote(atop(.(plot.title), atop(.(plot.subtitle), "")))) +
+  #  labs(x=NULL, y=NULL) +
+  #  theme_bw(base_family="sans") +
+  #  theme(axis.text.x=element_text(size=rel(0.8), angle=90, hjust=1, vjust=0.5, color="gray30"), panel.border=element_blank(), legend.key=element_blank(),
+  #        text=element_text(color="gray30"),
+  #        plot.title = element_text(hjust = 0, size = rel(1.5), face = "bold"), strip.background=element_blank(),
+  #        plot.margin = unit(c(2, 2, 2, 2), "lines"), 
+  #        strip.text.x = element_text(size = rel(1.1), color="gray30"))
+  
+  #month x school
+  #gg <- ggplot() +
+  #  geom_hline(yintercept=min.temp, linetype="dotted", color="black", size=0.5) +
+  #  geom_boxplot(data=s, aes(x=Month, y=UTCI_F, color=index, fill=index), alpha=0.5, outlier.colour = "transparent", show.legend = FALSE) + 
+  #  facet_grid(~School, drop=FALSE) + 
+  #  scale_y_continuous(breaks=seq(55,110,5), limits=c(55,110), labels=ggdeg(seq(55,110,5))) +
+  #  scale_color_manual(name="", values=c("2"="royalblue1", "1"="#FC4F30")) +
+  #  scale_fill_manual(name="", values=c("2"="royalblue1", "1"="#FC4F30")) +
+  #  ggtitle(bquote(atop(.(plot.title), atop(.(plot.subtitle), "")))) +
+  #  labs(x=NULL, y=NULL) +
+  #  theme_bw(base_family="sans") +
+  #  theme(axis.text.x=element_text(size=rel(0.8), angle=90, hjust=1, vjust=0.5, color="gray30"), panel.border=element_blank(), legend.key=element_blank(),
+  #        text=element_text(color="gray30"),
+  #        plot.title = element_text(hjust = 0, size = rel(1.5), face = "bold"), strip.background=element_blank(),
+  #        plot.margin = unit(c(2, 2, 2, 2), "lines"), 
+  #        strip.text.x = element_text(size = rel(1.1), color="gray30"))
+  
+  #interquartile plot
+  s.monthly <- s %>% group_by(School, Month) %>% mutate(upper = max(UTCI_F, na.rm=TRUE), 
+                                                        lower=min(UTCI_F, na.rm=TRUE), 
+                                                        med=median(UTCI_F, na.rm=TRUE), 
+                                                        uq = quantile(UTCI_F, 0.75, na.rm=TRUE),
+                                                        lq = quantile(UTCI_F, 0.25, na.rm=TRUE)) %>% distinct(School, Month) 
   
   gg <- ggplot() +
-    geom_rect(data = summer[summer$Month %in% c("June", "July"),], xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf, fill="dimgrey", alpha=0.2) +
     geom_hline(yintercept=min.temp, linetype="dotted", color="black", size=0.5) +
-    geom_tufteboxplot(data=cr, aes(School, UTCI_F, color=index), alpha=0.5, size=1) +
-    facet_wrap(~Month, drop=FALSE, ncol=12) +
-    scale_y_continuous(breaks=seq(60,100,5), limits=c(65,95)) +
-    scale_color_manual(name="", values=c("2"="dimgrey", "1"="firebrick"), guide=FALSE) +
+    geom_linerange(data=s.monthly, aes(x=Month, ymin=lower, ymax=upper), color="royalblue1", alpha=0.3, size=1.3) +
+    geom_linerange(data=s.monthly, aes(x=Month, ymin=lq, ymax=uq), color="royalblue1", alpha=0.9, size=1.3) +
+    geom_point(data=s.monthly, aes(x=Month, y=med), shape='-', size=5, color="wheat4") +
+    facet_grid(~School, drop=FALSE) +
     ggtitle(bquote(atop(.(plot.title), atop(.(plot.subtitle), "")))) +
+    scale_y_continuous(breaks=seq(60,130,5), limits=c(60,130), labels=ggdeg(seq(60,130,5))) +
+    scale_x_discrete(labels=c("August"="A", "September"="S", "October"="O", "November"="N", "December"="D", "January"="J", "February"="F", "March"="M", "April"="A", "May"="M", "June"="J", "July"="J")) +
     labs(x=NULL, y=NULL) +
     theme_bw(base_family="sans") +
-    theme(axis.text.x=element_text(size=rel(0.8), angle=90, hjust=1, vjust=0.5), panel.border=element_blank(), legend.key=element_blank(),
-          text=element_text(color="gray30"),
+    theme(axis.text.x=element_text(size=rel(0.8), color="gray30"), panel.border=element_blank(), legend.key=element_blank(),
+          text=element_text(color="gray30"), axis.ticks = element_blank(),
           plot.title = element_text(hjust = 0, size = rel(1.5), face = "bold"), strip.background=element_blank(),
           plot.margin = unit(c(2, 2, 2, 2), "lines"), 
           strip.text.x = element_text(size = rel(1.1), color="gray30"))
   
   
-  ggsave(filename=paste0("~/dropbox/rh1/hidoe/plots/hidoe-", tolower(clustervar), "-", tolower(clustervalue), ".pdf"), gg, width=30, height=16, units="in")
+  ggsave(filename=paste0("~/dropbox/rh1/hidoe/plots/", tolower(clustervar), "-", tolower(clustervalue), ".pdf"), gg, width=30, height=16, units="in")
   
 }    
 
@@ -294,4 +339,7 @@ temp2utci <- function(df, temp, rh, wind) {
   tempdata <- tempdata %>% mutate(utcif=(f1+f2+f3+f4+f5+f6+f7+f8+f9)*(9/5)+32)   
   df$UTCI_F <- tempdata$utcif
   return(df)
+}
+ggdeg <- function(x) {
+  parse(text = paste(x, "*degree", sep = ""))
 }
