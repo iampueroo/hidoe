@@ -8,6 +8,9 @@ roomchart <- function(classroomlist, UTCIrange, winddirection, months, start, en
   library(ggthemes) 
   library(scales)
   library(directlabels)
+  library(grid)
+  library(gridExtra) 
+  library(gtable)
   
   min.temp <- 85
   start.date <- as.Date(start, format="%m-%d-%Y")
@@ -77,28 +80,35 @@ roomchart <- function(classroomlist, UTCIrange, winddirection, months, start, en
   
   # Evaluation conditions
   o.dfs <- lapply(o.dfs, function(x) x[(x$Date >= start.date & x$Date <= end.date) & (x$Month %in% months) & (x$UTCI_F >= min & x$UTCI_F <= max), ])
-  cro.dfs = list()
-  for (i in 1:length(classroomlist)) {
-    cro.dfs[[i]] <- inner_join(cr.dfs[[i]], o.dfs[[i]][,c("closestDatetime", "UTCI_F")], by=c("Datetime_HST" = "closestDatetime"))
-    
-    ##work on this!!!
-    gg <- ggplot() + #plot outdoor weather for weather stations at each condition - include rain, etc
-        geom_point(data=cro.dfs[[i]], aes(x=Datetime_HST, y=UTCI_F.y), size=0.5, color="dimgrey", alpha=0.5)
-    assign(paste0("ggo", i), gg)
-    
-  }
   
+  cro.dfs = list()
+  for (i in 1:length(classroomlist)) { cro.dfs[[i]] <- inner_join(cr.dfs[[i]], o.dfs[[i]][,c("closestDatetime", "UTCI_F")], by=c("Datetime_HST" = "closestDatetime")) }
+  
+  o <- do.call("rbind", o.dfs)
+  ggo <- ggplot() +
+    geom_histogram(data=o, aes(x=UTCI_F, y=..count../sum(..count..)), binwidth = 0.01, alpha=0.5) +
+    facet_wrap(~WS_ID, ncol=1) +
+    scale_x_continuous(breaks=seq(60,110,5), labels=ggdeg(seq(60,110,5))) +
+    labs(x=NULL, y=NULL) +
+    theme_bw(base_family="sans") +
+    theme(axis.ticks=element_blank(), legend.position="none", panel.border=element_blank(), legend.key=element_blank(),
+          text=element_text(color="gray30"),
+          plot.title = element_text(hjust = 0, size = rel(1.5), face = "bold"), strip.background=element_blank(),
+          plot.margin = unit(c(2, 2, 2, 2), "lines"), 
+          strip.text.x = element_text(size = rel(1.1), color="gray30"),
+          axis.text.y=element_blank())
+    
   cro <- do.call("rbind", cro.dfs) #combine individual classroom dataframes into single dataframe
   cro <- cro[,c("Datetime_HST", "Alias", "UTCI_F.x", "Time", "UTCI_F.y")]
   colnames(cro) <- c("Datetime_HST", "Alias", "InUTCI_F", "Time", "OutUTCI_F")
   
   cr <- cro[,c("Datetime_HST", "Alias", "Time", "InUTCI_F")]
-  o <- cro[,c("Datetime_HST", "Time", "OutUTCI_F")]
-  o$Alias <- "Outdoor"
+  o.int <- cro[,c("Datetime_HST", "Time", "OutUTCI_F")]
+  o.int$Alias <- "Outdoor"
   
   
   cr.hourly <- cr %>% group_by(Alias, Time) %>% summarise(avgUTCI=mean(InUTCI_F, na.rm=TRUE)) %>% gather(variable, value, -Alias, -Time)
-  o.hourly <- o %>% group_by(Time) %>% summarize(avgUTCI=mean(OutUTCI_F, na.rm=TRUE)) %>% gather(variable, value, -Time)
+  o.hourly <- o.int %>% group_by(Time) %>% summarize(avgUTCI=mean(OutUTCI_F, na.rm=TRUE)) %>% gather(variable, value, -Time)
   
   #Manipulations for plotting
   o.hourly$Time <- as.POSIXct(o.hourly$Time, format="%H:%M", tz="UTC")
@@ -112,15 +122,15 @@ roomchart <- function(classroomlist, UTCIrange, winddirection, months, start, en
   plot.subtitle <- "Universal Thermal Climate Index"
   ## add conditios in annotation
   
-  gg <- ggplot() +
+  ggc <- ggplot() +
     geom_hline(yintercept=min.temp, linetype="dotted", color="black", size=0.5) +
     geom_line(data=o.hourly, aes(x=Time, y=value), color="dimgrey", alpha=0.6, size=1) +
     geom_line(data=cr.hourly, aes(x=Time, y=value, group=Alias, color=Alias), size=1.5, alpha=0.6) + 
-    annotate("text", x=ggtime("01:00"), y=max+1.98, label=paste(start, "to", end), size=4, fontface="bold", color="gray30") +
-    annotate("text", x=ggtime("04:30"), y=max+1.5, label=pastemonths(months), size=4, fontface="bold", color="gray30") +
-    annotate("text", x=ggtime("00:30"), y=max+1, label=UTCIrange, size=4, fontface="bold", color="gray30") +
+    #annotate("text", x=ggtime("01:00"), y=max+1.98, label=paste(start, "to", end), size=4, color="gray30") +
+    #annotate("text", x=ggtime("03:30"), y=max+1.5, label=pastemonths(months), size=4, color="gray30") +
+    #annotate("text", x=ggtime("00:10"), y=max+1, label=UTCIrange, size=4, color="gray30") +
     scale_color_fivethirtyeight() +
-    scale_y_continuous(breaks=seq(60,110,5), labels=ggdeg(seq(60,110,5)), limits=c(min-2, max+2)) +
+    scale_y_continuous(breaks=seq(60,110,5), labels=ggdeg(seq(60,110,5)), limits=c(min, max)) +
     scale_x_datetime(breaks=bks, labels=labs, limits=lims) +
     ggtitle(bquote(atop(.(plot.title), atop(.(plot.subtitle), "")))) +
     labs(x=NULL, y=NULL) +
@@ -131,7 +141,11 @@ roomchart <- function(classroomlist, UTCIrange, winddirection, months, start, en
           plot.margin = unit(c(2, 2, 2, 2), "lines"), 
           strip.text.x = element_text(size = rel(1.1), color="gray30"))
   
-  gg <- direct.label.ggplot(gg, list("last.qp", cex=1.2, alpha=0.6))
+  ggc <- direct.label.ggplot(ggc, list("last.qp", cex=1.2, alpha=0.6))
+  
+  gg <- arrangeGrob(ggc,ggo, layout_matrix=rbind(c(1), c(1), c(1), c(1), c(2)))
+  ggsave(filename=paste0("~/dropbox/rh1/hidoe/plots/", gsub("---", "", tolower(gsub(" ", "-", paste(classroomlist, collapse="-")))), ".pdf"), gg, width=30, height=16, units="in")
+  
   
 }
 
