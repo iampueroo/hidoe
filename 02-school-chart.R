@@ -100,7 +100,7 @@ schoolchart <- function(school, start, end) {
   lims <- ggtime(c("0:00", "23:59"))
   lims[2] <- lims[2] + 3*60*60 #add hours to make space for labels
   bks <- ggtime(c("0:00", "02:00", "04:00", "06:00", "08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "16:00", "18:00", "20:00", "22:00", "23:59:99"))
-  labs <- c("0:00", rep("", 3), "8:00", rep("", 5), "14:00", rep("", 4), "24:00")
+  labs <- c("00:00", rep("", 3), "08:00", rep("", 5), "14:00", rep("", 4), "24:00")
   cr.hourly$Alias <- factor(cr.hourly$Alias, c(gr1, gr2, gr3))
   
   
