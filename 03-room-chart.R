@@ -1,29 +1,23 @@
-classroomchart <- function(classroomlist, start, end) {
-  
+roomchart <- function(classroomlist, UTCIrange, winddirection, months, start, end) {
   library(readxl)
   library(readr)
   library(googlesheets)
   library(dplyr)
   library(tidyr)
-  library(RColorBrewer)
   library(ggplot2)
   library(ggthemes) 
-  library(lattice)
   library(scales)
   library(directlabels)
   
-  # Static variables
   min.temp <- 85
   start.date <- as.Date(start, format="%m-%d-%Y")
   end.date <- as.Date(end, format="%m-%d-%Y")
+  min <- as.numeric(sub("(.*)-(.*)", "\\1", UTCIrange)) 
+  max <- as.numeric(sub(".*-(.*)", "\\1", UTCIrange)) 
   
-  colors <- rep(c("#114B5F", "#028090", "#C6EAB2", "#456990", "#F45B69"), times=10)
-  colors2 <- rep(c("#247BA0", "#70C1B3", "#B2DBBF", "#F3FFBD", "#FF1654"), times=10)
-
-  # Input data
   sheets <- gs_ls() #google sheets
   gs <- gs_title("MASTER-sensor-weather-deployment") %>% gs_read(ws = "site-list") 
-  if (end.date <= as.Date("10-17-2014", format="%m-%d-%Y")) {ws = list(rep("KHIEWABE3", times=length(classroomlist)))
+  if (end.date <= as.Date("10-17-2014", format="%m-%d-%Y")) {wslist = rep(list("KHIEWABE3"), times=length(classroomlist))
   } else { wslist <- lapply(classroomlist, function(x) as.character(gs[gs$School==getschool(x), c("Closest WS - Any")])) }
   
   o.old <- read_csv(file="~/BOX Sync/HIDOE-Data-Repository/Raw/Weather-Station/HNEI_EwaWeather_Raw_Full.csv") #outdoor - pilot 
@@ -61,18 +55,11 @@ classroomchart <- function(classroomlist, start, end) {
   site <- site[c("School", "Short School Name", "Island", "Zone", "Climate", "Elevation")]
   colnames(site) <- c("SchoolLong", "School", "Island", "Zone", "Climate", "Elevation")
   
-  shours <- read_csv(file="~/BOX Sync/HIDOE-Data-Repository/school-hours.csv")
-  shours$Time <- format(strptime(shours$Time, format="%H:%M"), format="%H:%M")
-  
   # Restrictions
-  o <- o[o$Date >= start.date & o$Date <= end.date, ] #date range
-  cr <- cr[cr$Date >= start.date & cr$Date <= end.date, ] #date range
   o <- o[complete.cases((o)),] 
   cr <- cr[complete.cases((cr)),]
-  o <- o[o$Time %in% shours$Time, ] #school hours
-  cr <- cr[cr$Time %in% shours$Time, ] #school hours
   
-  
+  #individual by classroom
   cr.dfs <- split(cr, cr$Alias)
   o.dfs.temp <- split(o, o$WS_ID)
   o.dfs = list()
@@ -81,9 +68,6 @@ classroomchart <- function(classroomlist, start, end) {
     o.dfs[[i]] <- o.dfs.temp[[ws]] 
   }
   
-  
-  ### Plot 
-  ## UTCI
   ints <- lapply(cr.dfs, function(x) unique(x$Datetime_HST))
   reg.ints = list()
   for (i in 1:length(ints)) { 
@@ -91,52 +75,53 @@ classroomchart <- function(classroomlist, start, end) {
     o.dfs[[i]]$closestDatetime <- reg.ints[[i]]$Datetime_HST[findInterval(o.dfs[[i]]$Datetime_HST, c(-Inf, head(reg.ints[[i]]$Datetime_HST,-1)) + c(0, diff(as.numeric(reg.ints[[i]]$Datetime_HST))/2))]
   }
   
-  #o.dfs <- lapply(o.dfs, transform, Date=as.Date(closestDatetime, format="%Y-%m-%d"))
-  #o.dfs <- lapply(o.dfs, transform, Time=format(strptime(closestDatetime, format="%Y-%m-%d %H:%M:%S"), format="%H:%M"))
-  #o.dfs <- lapply(o.dfs, transform, Month=factor(format(Date, "%B"), c("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December")))
+  # Evaluation conditions
+  o.dfs <- lapply(o.dfs, function(x) x[(x$Date >= start.date & x$Date <= end.date) & (x$Month %in% months) & (x$UTCI_F >= min & x$UTCI_F <= max), ])
+  cro.dfs = list()
+  for (i in 1:length(classroomlist)) {
+    cro.dfs[[i]] <- inner_join(cr.dfs[[i]], o.dfs[[i]][,c("closestDatetime", "UTCI_F")], by=c("Datetime_HST" = "closestDatetime"))
+    
+    ##work on this!!!
+    gg <- ggplot() + #plot outdoor weather for weather stations at each condition - include rain, etc
+        geom_point(data=cro.dfs[[i]], aes(x=Datetime_HST, y=UTCI_F.y), size=0.5, color="dimgrey", alpha=0.5)
+    assign(paste0("ggo", i), gg)
+    
+  }
   
-  o.dfs <- lapply(o.dfs, function(x) x[,c("closestDatetime", "UTCI_F")])
-  o.dfs <- lapply(o.dfs, function(x) tbl_df(x))
+  cro <- do.call("rbind", cro.dfs) #combine individual classroom dataframes into single dataframe
+  cro <- cro[,c("Datetime_HST", "Alias", "UTCI_F.x", "Time", "UTCI_F.y")]
+  colnames(cro) <- c("Datetime_HST", "Alias", "InUTCI_F", "Time", "OutUTCI_F")
   
-  #Get differences
-  cro.dfs <- mapply(function(x,y) inner_join(x, y, by=c("Datetime_HST" = "closestDatetime")), x=cr.dfs, y=o.dfs, simplify=FALSE)
-  cro.dfs <- map(function(x,y) inner_join(x, y, by=c("Datetime_HST" = "closestDatetime")), x=cr.dfs, y=o.dfs, simplify=FALSE)
-  cro <- inner_join(cr, o.int[,c("closestDatetime", "UTCI_F")], by=c("Datetime_HST" = "closestDatetime"))
-  cro <- cro %>% mutate(UTCIdiff_F=UTCI_F.x-UTCI_F.y)
-  
-  diff.hourly <- cro %>% group_by(Alias, Time, Month) %>% summarise(avgdiff=mean(UTCIdiff_F, na.rm=TRUE)) %>% gather(variable, value, -Alias, -Time, -Month)
-  diff.hourly$Time <- as.POSIXct(diff.hourly$Time, format="%H:%M", tz="UTC") 
-   
-  cr.hourly <- cr %>% group_by(Alias, Time, Month) %>% summarise(avgUTCI=mean(UTCI_F, na.rm=TRUE)) %>% gather(variable, value, -Alias, -Time, -Month)
-  o.hourly <- o.int %>% group_by(Time, Month) %>% summarize(avgTemp=mean(Temp_F, na.rm=TRUE), avgUTCI=mean(UTCI_F, na.rm=TRUE)) %>% gather(variable, value, -Time, -Month)
+  cr <- cro[,c("Datetime_HST", "Alias", "Time", "InUTCI_F")]
+  o <- cro[,c("Datetime_HST", "Time", "OutUTCI_F")]
+  o$Alias <- "Outdoor"
   
   
-  #manipulations for plotting
-  summer <- tbl_df(data.frame(Month=c("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"))) %>% mutate(Month = factor(Month, Month))
+  cr.hourly <- cr %>% group_by(Alias, Time) %>% summarise(avgUTCI=mean(InUTCI_F, na.rm=TRUE)) %>% gather(variable, value, -Alias, -Time)
+  o.hourly <- o %>% group_by(Time) %>% summarize(avgUTCI=mean(OutUTCI_F, na.rm=TRUE)) %>% gather(variable, value, -Time)
+  
+  #Manipulations for plotting
   o.hourly$Time <- as.POSIXct(o.hourly$Time, format="%H:%M", tz="UTC")
   cr.hourly$Time <- as.POSIXct(cr.hourly$Time, format="%H:%M", tz="UTC")
-  lims <- as.POSIXct(strptime(c("00:00","23:50"), format = "%H:%M"), tz="UTC")
-  lims[2] <- lims[2] + 5*60*60 #add hours to make space for labels
- 
-  plot.title <- school.name
-  plot.subtitle <- paste0("Universal Thermal Climate Index Profile", " (", start, " to ", end, ")")
- 
-  #if (("June" %in% unique(cr.hourly$Month)) & ("July" %in% unique(cr.hourly$Month))) {
-  # gg <- ggplot() +  geom_rect(data = months, xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf, fill="dimgrey", alpha=0.2) 
-  #} else {
-  #  gg <- ggplot() 
-  #}
-   
+  lims <- ggtime(c("0:00", "23:59"))
+  lims[2] <- lims[2] + 3*60*60 #add hours to make space for labels
+  bks <- ggtime(c("0:00", "02:00", "04:00", "06:00", "08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "16:00", "18:00", "20:00", "22:00", "23:59:99"))
+  labs <- c("0:00", rep("", 3), "8:00", rep("", 5), "14:00", rep("", 4), "24:00")
   
-  gg <- ggplot() +  
-    geom_rect(data = summer[summer$Month %in% c("June", "July"),], xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf, fill="dimgrey", alpha=0.2) +
+  plot.title <- "Classroom Comparison"
+  plot.subtitle <- "Universal Thermal Climate Index"
+  ## add conditios in annotation
+  
+  gg <- ggplot() +
     geom_hline(yintercept=min.temp, linetype="dotted", color="black", size=0.5) +
-    geom_line(data=o.hourly, aes(x=Time, y=value, linetype=variable), color="dimgrey", alpha=0.6, size=0.8) +
-    geom_line(data=cr.hourly, aes(x=Time, y=value, color=Alias, group=Alias), size=0.5, alpha=0.6) +
-    facet_wrap(~Month, drop=FALSE, ncol=12) +
-    scale_y_continuous(breaks=seq(60,100,5), limits=c(65,95)) +
-    scale_x_datetime(breaks=date_breaks("6 hour"), labels=date_format("%H:%M"), limits=lims) +
-    scale_color_manual(values= colorRampPalette(brewer.pal(11,"Spectral"))(length(unique(cr.hourly$Alias)))) +
+    geom_line(data=o.hourly, aes(x=Time, y=value), color="dimgrey", alpha=0.6, size=1) +
+    geom_line(data=cr.hourly, aes(x=Time, y=value, group=Alias, color=Alias), size=1.5, alpha=0.6) + 
+    annotate("text", x=ggtime("01:00"), y=max+1.98, label=paste(start, "to", end), size=4, fontface="bold", color="gray30") +
+    annotate("text", x=ggtime("04:30"), y=max+1.5, label=pastemonths(months), size=4, fontface="bold", color="gray30") +
+    annotate("text", x=ggtime("00:30"), y=max+1, label=UTCIrange, size=4, fontface="bold", color="gray30") +
+    scale_color_fivethirtyeight() +
+    scale_y_continuous(breaks=seq(60,110,5), labels=ggdeg(seq(60,110,5)), limits=c(min-2, max+2)) +
+    scale_x_datetime(breaks=bks, labels=labs, limits=lims) +
     ggtitle(bquote(atop(.(plot.title), atop(.(plot.subtitle), "")))) +
     labs(x=NULL, y=NULL) +
     theme_bw(base_family="sans") +
@@ -146,41 +131,9 @@ classroomchart <- function(classroomlist, start, end) {
           plot.margin = unit(c(2, 2, 2, 2), "lines"), 
           strip.text.x = element_text(size = rel(1.1), color="gray30"))
   
-  gg <- direct.label.ggplot(gg, list("last.qp", cex=0.68))
-  ggsave(filename=paste0("~/dropbox/rh1/hidoe/plots/avg-daily-", tolower(gsub(" ", "-", school)), ".pdf"), gg, width=30, height=16, units="in")
+  gg <- direct.label.ggplot(gg, list("last.qp", cex=1.2, alpha=0.6))
   
-  #UTCI Difference
-  cro <- inner_join(cr, o.int[,c("closestDatetime", "UTCI_F")], by=c("Datetime_HST" = "closestDatetime"))
-  cro <- cro %>% mutate(UTCIdiff_F=UTCI_F.x-UTCI_F.y)
-  
-  diff.hourly <- cro %>% group_by(Alias, Time, Month) %>% summarise(avgdiff=mean(UTCIdiff_F, na.rm=TRUE)) %>% gather(variable, value, -Alias, -Time, -Month)
-  diff.hourly$Time <- as.POSIXct(diff.hourly$Time, format="%H:%M", tz="UTC")
-  
-  #ggdiff <- ggplot() + 
-  #  geom_rect(data = months, xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf, fill="dimgrey", alpha=0.2) +
-  #  geom_hline(yintercept=0, linetype="dotted", color="black", size=0.5) +
-  #  geom_line(data=diff.hourly, aes(x=Time, y=value, color=Alias, group=Alias), size=0.5, alpha=0.6) +
-  #  facet_wrap(~Month, drop=FALSE, ncol=12) +
-  #  scale_y_continuous(breaks=seq(-15,15,5), limits=c(-15,15)) +
-  #  scale_x_datetime(breaks=date_breaks("6 hour"), labels=date_format("%H:%M"), limits=lims) +
-  #  scale_color_manual(values= colorRampPalette(brewer.pal(11,"Spectral"))(length(unique(diff.hourly$Alias)))) +
-  #  ggtitle(bquote(atop(.(plot.title), atop(.(plot.subtitle), "")))) +
-  #  labs(x=NULL, y=NULL) +
-  #  theme_bw(base_family="sans") +
-  #  theme(axis.ticks=element_blank(), legend.position="none", panel.border=element_blank(), legend.key=element_blank(),
-  #        text=element_text(color="gray30"),
-  #        plot.title = element_text(hjust = 0, size = rel(1.5), face = "bold"), strip.background=element_blank(),
-  #        plot.margin = unit(c(2, 2, 2, 2), "lines"), 
-  #        strip.text.x = element_text(size = rel(1.1), color="gray30"))
-  
-  #ggdiff <- direct.label.ggplot(ggdiff, list("last.qp", cex=0.45))
-  #ggsave(filename=paste0("~/dropbox/rh1/hidoe/plots/avg-daily-diff", tolower(gsub(" ", "-", school)), ".pdf"), ggdiff, width=30, height=16, units="in")
-  
-  
-  #http://www.r-bloggers.com/coloring-and-drawing-outside-the-lines-in-ggplot/
-  #https://coolors.co/app/114b5f-028090-c6eab2-456990-f45b69
-  
-}    
+}
 
 temp2utci <- function(df, temp, rh, wind) {
   ### Convert temperature F to UTCI F
@@ -411,11 +364,15 @@ temp2utci <- function(df, temp, rh, wind) {
   df$UTCI_F <- tempdata$utcif
   return(df)
 }
-
+ggtime <- function(time) {
+  as.POSIXct(strptime(time, format = "%H:%M"), tz="UTC")
+}
+ggdeg <- function(x) {
+  parse(text = paste(x, "*degree", sep = ""))
+}
 getschool <- function(classroom) {
   return(sub("(.*) -.*", "\\1", classroom))
 }
-
-ggtime <- function(time) {
-  return(as.POSIXct(time, format="%H:%M", tz="UTC"))
+pastemonths <- function(x) {
+  return(paste(x, sep="", collapse=", "))
 }
