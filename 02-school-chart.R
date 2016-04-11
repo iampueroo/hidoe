@@ -31,7 +31,7 @@ schoolchart <- function(school, start, end) {
   o.old$Time <- format(strptime(o.old$Datetime_HST, format="%m/%d/%y %H:%M"), format="%H:%M")
   o.old$Month <- factor(format(o.old$Date, "%B"), c("August", "September", "October", "November", "December", "January", "February", "March", "April", "May", "June", "July"))
   o.old$Datetime_HST <- as.POSIXct(paste(o.old$Date, o.old$Time), format="%Y-%m-%d %H:%M")
-  o.old <- o.old[o.old$Date<=as.Date("2014-10-17"),] #use old weather station only for pilot date range
+  o.old <- o.old[o.old$Date<=as.Date("2015-06-23"),] #use old weather station csv until new from Will
   
   o.new <- read_csv(file="~/BOX Sync/HIDOE-Data-Repository/Raw/Weather-Station/20160404-master-weather.csv") #new outdoor
   o.new$Date <- as.Date(o.new$Date_HST, format="%Y-%m-%d")
