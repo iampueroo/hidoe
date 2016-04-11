@@ -17,9 +17,10 @@ schoolchart <- function(school, start, end, focusrooms) {
   min.temp <- 85
   start.date <- as.Date(start, format="%m-%d-%Y")
   end.date <- as.Date(end, format="%m-%d-%Y")
+  #e5ae38
   
   # Input data
-  shours <- read.csv(file="~/BOX Sync/HIDOE-Data-Repository/school-hours.csv", sep=",")  #school hours
+  shours <- read_csv(file="~/BOX Sync/HIDOE-Data-Repository/school-hours.csv")  #school hours
   shours$Time <- format(strptime(shours$Time, format="%H:%M"), format="%H:%M")
   
   sheets <- gs_ls() #google sheets
@@ -72,25 +73,16 @@ schoolchart <- function(school, start, end, focusrooms) {
   
   ### Plot 
   ## UTCI
-  int <- unique(cr$Datetime_HST)
-  reg.int <- tbl_df(data.frame(Datetime_HST=int)) %>% arrange(Datetime_HST) #create regular interval data on closest match
-  
-  o$closestDatetime <- reg.int$Datetime_HST[findInterval(o$Datetime_HST, c(-Inf, head(reg.int$Datetime_HST,-1)) + c(0, diff(as.numeric(reg.int$Datetime_HST))/2))]
-  o.int <- o[,c("Temp_F", "UTCI_F", "closestDatetime")]
-  o.int$Date <- as.Date(o.int$closestDatetime, format="%Y-%m-%d")
-  o.int$Time <- format(strptime(o.int$closestDatetime, format="%Y-%m-%d %H:%M:%S"), format="%H:%M")
-  o.int$Month <- factor(format(o.int$Date, "%B"), c("August", "September", "October", "November", "December", "January", "February", "March", "April", "May", "June", "July"))
-  
   cr.hourly <- cr %>% group_by(Alias, Time, Month) %>% summarise(avgUTCI=mean(UTCI_F, na.rm=TRUE)) %>% gather(variable, value, -Alias, -Time, -Month)
-  o.hourly <- o.int %>% group_by(Time, Month) %>% summarize(avgUTCI=mean(UTCI_F, na.rm=TRUE)) %>% gather(variable, value, -Time, -Month)
+  o.hourly <- o %>% group_by(Time, Month) %>% summarize(avgUTCI=mean(UTCI_F, na.rm=TRUE)) %>% gather(variable, value, -Time, -Month)
  
   #calculate heat index  
-  stats <- o.hourly %>% filter(Time %in% shours$Time) %>% group_by(Month) %>% summarize(stddev=sd(value, na.rm=TRUE), avg=mean(value, na.rm=TRUE))
-  outliers <- cr.hourly %>% group_by(Alias, Month) %>% summarize(av=mean(value, na.rm=TRUE))
-  outliers <- inner_join(outliers, stats, by="Month")
-  #outliers$index <- ifelse(outliers$av >= outliers$avg+2*outliers$stddev, 1, ifelse(outliers$av >= outliers$avg+1.5*outliers$stddev, 2, 3)) #change to calculate for school hours only
-  outliers$index <- ifelse(outliers$Alias %in% focusrooms, 1, 3)
-  outliers <- outliers %>% group_by(Alias) %>% summarize(ind=as.character(min(index), na.rm=TRUE))
+  ostats <- o.hourly %>% filter(Time %in% shours$Time) %>% group_by(Month) %>% summarize(stddev=sd(value, na.rm=TRUE), avg=mean(value, na.rm=TRUE))
+  crstats <- cr.hourly %>% filter(Time %in% shours$Time) %>% group_by(Alias, Month) %>% summarize(av=mean(value, na.rm=TRUE))
+  stats <- inner_join(crstats, ostats, by="Month")
+  #stats$index <- ifelse(stats$av >= stats$avg+2*stats$stddev, 1, ifelse(stats$av >= stats$avg+1.5*stats$stddev, 2, 3)) #change to calculate for school hours only
+  stats$index <- ifelse(stats$Alias %in% focusrooms, 1, 3)
+  outliers <- stats %>% group_by(Alias) %>% summarize(ind=as.character(min(index), na.rm=TRUE))
   grps <- split(outliers, outliers$ind)
   gr1 <- as.vector(grps[["1"]]$Alias)
   gr2 <- as.vector(grps[["2"]]$Alias)
@@ -99,23 +91,31 @@ schoolchart <- function(school, start, end, focusrooms) {
   
   #manipulations for plotting
   summer <- tbl_df(data.frame(Month=c("August", "September", "October", "November", "December", "January", "February", "March", "April", "May", "June", "July"))) %>% mutate(Month = factor(Month, Month))
-  o.hourly$Time <- as.POSIXct(o.hourly$Time, format="%H:%M", tz="UTC")
-  cr.hourly$Time <- as.POSIXct(cr.hourly$Time, format="%H:%M", tz="UTC")
+  
+  o.hourly$Time <- ggtime(o.hourly$Time)
+  cr.hourly$Time <-  ggtime(cr.hourly$Time)
+  
   lims <- ggtime(c("0:00", "23:59"))
   lims[2] <- lims[2] + 3*60*60 #add hours to make space for labels
+  
   bks <- ggtime(c("0:00", "08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00","23:59:99"))
   labs <- c("00:00", "08:00", rep("", 5), "14:00", "24:00")
+  
   cr.hourly$Alias <- factor(cr.hourly$Alias, c(gr1, gr2, gr3))
   
+  ann <- tbl_df(data.frame(Time=ggtime("12:00"), 
+                           UTCI_F=65.5, 
+                           lab = paste0(format(start.date, "%b %d %Y"), " to ", format(end.date, "%b %d %Y")), Month = factor("August",levels = c("August", "September", "October", "November", "December", "January", "February", "March", "April", "May", "June", "July"))))
   
   plot.title <- school.name
-  plot.subtitle <- paste0("Universal Thermal Climate Index Profile", " (", start, " to ", end, ")")
+  plot.subtitle <- "Universal Thermal Climate Index Profile"
    
   gg <- ggplot() +  
     geom_rect(data = summer[summer$Month %in% c("June", "July"),], xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf, fill="gray70", alpha=0.1) +
     geom_hline(yintercept=min.temp, linetype="dotted", color="black", size=0.5) +
-    geom_line(data=o.hourly, aes(x=Time, y=value), color="dimgrey", alpha=0.6, size=0.7) +
+    geom_smooth(data=o.hourly, aes(x=Time, y=value), color="dimgrey", alpha=0.6, size=0.7, se=FALSE, method="loess", span=0.1) +
     geom_line(data=cr.hourly, aes(x=Time, y=value, group=Alias, color=Alias), size=0.4, alpha=0.6) + 
+    geom_label(data=ann, aes(x=Time, y=UTCI_F, label=lab, group=1), color="gray30", size=3, hjust="center") + 
     facet_wrap(~Month, drop=FALSE, ncol=12) +
     scale_color_manual(name="", values=c(rep("#FF2700", times=length(gr1)), rep("#E69720", times=length(gr2)), rep("dodgerblue4", times=length(gr3)))) + 
     scale_y_continuous(breaks=seq(60,110,5), limits=c(65,100), labels=ggdeg(seq(60,110,5))) +
@@ -132,15 +132,20 @@ schoolchart <- function(school, start, end, focusrooms) {
   gg <- direct.label.ggplot(gg, list("last.qp", cex=0.7))
   ggsave(filename=paste0("~/dropbox/rh1/hidoe/plots/", tolower(gsub(" ", "-", school)), "-profile.pdf"), gg, width=30, height=16, units="in")
   
-  o.hourly <- o.hourly[o.hourly$Month %in% c("August", "September", "October"), ]
-  o.hourly$Month <- factor(o.hourly$Month, c("August", "September", "October"))
-  cr.hourly <- cr.hourly[cr.hourly$Month %in% c("August", "September", "October"), ]
-  cr.hourly$Month <- factor(cr.hourly$Month, c("August", "September", "October"))
+  o.hourly3 <- o.hourly[o.hourly$Month %in% c("August", "September", "October"), ]
+  o.hourly3$Month <- factor(o.hourly3$Month, c("August", "September", "October"))
+  cr.hourly3 <- cr.hourly[cr.hourly$Month %in% c("August", "September", "October"), ]
+  cr.hourly3$Month <- factor(cr.hourly3$Month, c("August", "September", "October"))
+  ann3 <- ann[ann$Month %in% c("August", "September", "October"), ]
+  ann3$Month <- factor(ann3$Month, c("August", "September", "October"))
+  ann3$UTCI_F <- 70.5
+  ann3$Time <- ggtime("11:00")
   
   gg3 <- ggplot() +  
     geom_hline(yintercept=min.temp, linetype="dotted", color="black", size=0.5) +
-    geom_line(data=o.hourly, aes(x=Time, y=value), color="dimgrey", alpha=0.6, size=0.7) +
-    geom_line(data=cr.hourly, aes(x=Time, y=value, group=Alias, color=Alias), size=0.4, alpha=0.6) + 
+    geom_smooth(data=o.hourly3, aes(x=Time, y=value), color="dimgrey", alpha=0.6, size=0.7, se=FALSE, method="loess", span=0.1) +
+    geom_line(data=cr.hourly3, aes(x=Time, y=value, group=Alias, color=Alias), size=0.4, alpha=0.6) + 
+    geom_label(data=ann3, aes(x=Time, y=UTCI_F, label=lab, group=1), color="gray30", size=3, hjust="center") + 
     facet_wrap(~Month, drop=FALSE, ncol=3) +
     scale_color_manual(name="", values=c(rep("#FF2700", times=length(gr1)), rep("#E69720", times=length(gr2)), rep("dodgerblue4", times=length(gr3)))) + 
     scale_y_continuous(breaks=seq(60,110,5), labels=ggdeg(seq(60,110,5))) +
@@ -158,8 +163,75 @@ schoolchart <- function(school, start, end, focusrooms) {
   ggsave(filename=paste0("~/dropbox/rh1/hidoe/plots/", tolower(gsub(" ", "-", school)), "-profile-hot-months.pdf"), gg3, width=30, height=16, units="in")
   
   
+  #Plots restricted to school hours -----------------------------------------------------------------------------------------------------
+  temp <- o.hourly %>% group_by(Month, variable) %>% do(data.frame(smooth=loess(value ~ as.numeric(Time), data=., model=TRUE, span=0.1)$fitted)) 
+  o.hourly <- tbl_df(cbind(o.hourly, temp$smooth))
+  colnames(o.hourly) <- c("Time", "Month", "variable", "value", "smooth")
   
+  o.hourly$Time <- format(strptime(o.hourly$Time, format="%Y-%m-%d %H:%M:%S"), format="%H:%M")
+  cr.hourly$Time <- format(strptime(cr.hourly$Time, format="%Y-%m-%d %H:%M:%S"), format="%H:%M")
   
+  o.hourly <- o.hourly %>% filter(as.character(Time) %in% shours$Time)
+  cr.hourly <- cr.hourly %>% filter(Time %in% shours$Time)
+  
+  o.hourly$Time <- ggtime(o.hourly$Time)
+  cr.hourly$Time <- ggtime(cr.hourly$Time)
+  
+  lims <- ggtime(c("8:00", "17:00"))
+  
+  bks <- ggtime(c("08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00"))
+  labs <- c("08:00", "", "", "11:00", "", "", "14:00")
+  
+  plot.title <- school.name
+  plot.subtitle <- "Universal Thermal Climate Index Profile"
+  
+  ggs <- ggplot() +  
+    geom_rect(data = summer[summer$Month %in% c("June", "July"),], xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf, fill="gray70", alpha=0.1) +
+    geom_hline(yintercept=min.temp, linetype="dotted", color="black", size=0.5) +
+    geom_smooth(data=o.hourly, aes(x=Time, y=value), color="dimgrey", alpha=0.6, size=0.7, se=FALSE, method="loess", span=0.3) +
+    geom_line(data=cr.hourly, aes(x=Time, y=value, group=Alias, color=Alias), size=0.4, alpha=0.6) + 
+    geom_label(data=ann, aes(x=Time, y=UTCI_F, label=lab, group=1), color="gray30", size=3, hjust="center") + 
+    facet_wrap(~Month, drop=FALSE, ncol=12) +
+    scale_color_manual(name="", values=c(rep("#FF2700", times=length(gr1)), rep("#E69720", times=length(gr2)), rep("dodgerblue4", times=length(gr3)))) + 
+    scale_y_continuous(breaks=seq(60,110,5), limits=c(65,100), labels=ggdeg(seq(60,110,5))) +
+    scale_x_datetime(breaks=bks, labels=labs, limits=lims) +
+    ggtitle(bquote(atop(.(plot.title), atop(.(plot.subtitle), "")))) +
+    labs(x=NULL, y=NULL) +
+    theme_bw(base_family="sans") +
+    theme(axis.ticks=element_blank(), legend.position="none", panel.border=element_blank(), legend.key=element_blank(),
+          text=element_text(color="gray30"),
+          plot.title = element_text(hjust = 0, size = rel(1.5), face = "bold"), strip.background=element_blank(),
+          plot.margin = unit(c(2, 2, 2, 2), "lines"), 
+          strip.text.x = element_text(size = rel(1.1), color="gray30"))
+  
+  ggs <- direct.label.ggplot(ggs, list("last.qp", cex=0.7))
+  ggsave(filename=paste0("~/dropbox/rh1/hidoe/plots/", tolower(gsub(" ", "-", school)), "-profile-school-hours.pdf"), ggs, width=30, height=16, units="in")
+  
+  o.hourly3 <- o.hourly[o.hourly$Month %in% c("August", "September", "October"), ]
+  o.hourly3$Month <- factor(o.hourly3$Month, c("August", "September", "October"))
+  cr.hourly3 <- cr.hourly[cr.hourly$Month %in% c("August", "September", "October"), ]
+  cr.hourly3$Month <- factor(cr.hourly3$Month, c("August", "September", "October"))
+  
+  ggs3 <- ggplot() +  
+    geom_hline(yintercept=min.temp, linetype="dotted", color="black", size=0.5) +
+    geom_smooth(data=o.hourly3, aes(x=Time, y=value), color="dimgrey", alpha=0.6, size=0.7, se=FALSE, method="loess", span=0.3) +
+    geom_line(data=cr.hourly3, aes(x=Time, y=value, group=Alias, color=Alias), size=0.4, alpha=0.6) + 
+    geom_label(data=ann3, aes(x=Time, y=UTCI_F, label=lab, group=1), color="gray30", size=3, hjust="center") + 
+    facet_wrap(~Month, drop=FALSE, ncol=3) +
+    scale_color_manual(name="", values=c(rep("#FF2700", times=length(gr1)), rep("#E69720", times=length(gr2)), rep("dodgerblue4", times=length(gr3)))) + 
+    scale_y_continuous(breaks=seq(60,110,5), labels=ggdeg(seq(60,110,5))) +
+    scale_x_datetime(breaks=bks, labels=labs, limits=lims) +
+    ggtitle(bquote(atop(.(plot.title), atop(.(plot.subtitle), "")))) +
+    labs(x=NULL, y=NULL) +
+    theme_bw(base_family="sans") +
+    theme(axis.ticks=element_blank(), legend.position="none", panel.border=element_blank(), legend.key=element_blank(),
+          text=element_text(color="gray30"),
+          plot.title = element_text(hjust = 0, size = rel(1.5), face = "bold"), strip.background=element_blank(),
+          plot.margin = unit(c(2, 2, 2, 2), "lines"), 
+          strip.text.x = element_text(size = rel(1.1), color="gray30"))
+  
+  ggs3 <- direct.label.ggplot(ggs3, list("last.qp", cex=0.7))
+  ggsave(filename=paste0("~/dropbox/rh1/hidoe/plots/", tolower(gsub(" ", "-", school)), "-profile-hot-months-school-hours.pdf"), ggs3, width=30, height=16, units="in")
   
   #http://www.r-bloggers.com/coloring-and-drawing-outside-the-lines-in-ggplot/
   
