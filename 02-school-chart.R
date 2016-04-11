@@ -177,7 +177,7 @@ schoolchart <- function(school, start, end, focusrooms) {
   o.hourly$Time <- ggtime(o.hourly$Time)
   cr.hourly$Time <- ggtime(cr.hourly$Time)
   
-  lims <- ggtime(c("8:00", "17:00"))
+  lims <- ggtime(c("8:00", "15:00"))
   
   bks <- ggtime(c("08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00"))
   labs <- c("08:00", "", "", "11:00", "", "", "14:00")
