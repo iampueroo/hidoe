@@ -1,4 +1,4 @@
-schoolchart <- function(school, start, end) {
+schoolchart <- function(school, start, end, focusrooms) {
   #Kaimiloa - P14 looks a bit off...
   
   library(readxl)
@@ -19,8 +19,11 @@ schoolchart <- function(school, start, end) {
   end.date <- as.Date(end, format="%m-%d-%Y")
   
   # Input data
+  shours <- read.csv(file="~/BOX Sync/HIDOE-Data-Repository/school-hours.csv", sep=",")  #school hours
+  shours$Time <- format(strptime(shours$Time, format="%H:%M"), format="%H:%M")
+  
   sheets <- gs_ls() #google sheets
-  gs <- gs_title("MASTER-sensor-weather-deployment") %>% gs_read(ws = "site-list") 
+  gs <- gs_title("MASTER-sensor-weather-deployment") %>% gs_read(ws = "School List") 
   if (end.date <= as.Date("10-17-2014", format="%m-%d-%Y")) {ws = "KHIEWABE3"
   } else {ws <- as.character(gs[gs$School==school, c("Closest WS - Any")])}
   
@@ -82,10 +85,11 @@ schoolchart <- function(school, start, end) {
   o.hourly <- o.int %>% group_by(Time, Month) %>% summarize(avgUTCI=mean(UTCI_F, na.rm=TRUE)) %>% gather(variable, value, -Time, -Month)
  
   #calculate heat index  
-  stats <- o.hourly %>% group_by(Month) %>% summarize(stddev=sd(value, na.rm=TRUE), avg=mean(value, na.rm=TRUE))
+  stats <- o.hourly %>% filter(Time %in% shours$Time) %>% group_by(Month) %>% summarize(stddev=sd(value, na.rm=TRUE), avg=mean(value, na.rm=TRUE))
   outliers <- cr.hourly %>% group_by(Alias, Month) %>% summarize(av=mean(value, na.rm=TRUE))
   outliers <- inner_join(outliers, stats, by="Month")
-  outliers$index <- ifelse(outliers$av >= outliers$avg+2*outliers$stddev, 1, ifelse(outliers$av >= outliers$avg+1.5*outliers$stddev, 2, 3))
+  #outliers$index <- ifelse(outliers$av >= outliers$avg+2*outliers$stddev, 1, ifelse(outliers$av >= outliers$avg+1.5*outliers$stddev, 2, 3)) #change to calculate for school hours only
+  outliers$index <- ifelse(outliers$Alias %in% focusrooms, 1, 3)
   outliers <- outliers %>% group_by(Alias) %>% summarize(ind=as.character(min(index), na.rm=TRUE))
   grps <- split(outliers, outliers$ind)
   gr1 <- as.vector(grps[["1"]]$Alias)
@@ -99,8 +103,8 @@ schoolchart <- function(school, start, end) {
   cr.hourly$Time <- as.POSIXct(cr.hourly$Time, format="%H:%M", tz="UTC")
   lims <- ggtime(c("0:00", "23:59"))
   lims[2] <- lims[2] + 3*60*60 #add hours to make space for labels
-  bks <- ggtime(c("0:00", "02:00", "04:00", "06:00", "08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "16:00", "18:00", "20:00", "22:00", "23:59:99"))
-  labs <- c("00:00", rep("", 3), "08:00", rep("", 5), "14:00", rep("", 4), "24:00")
+  bks <- ggtime(c("0:00", "08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00","23:59:99"))
+  labs <- c("00:00", "08:00", rep("", 5), "14:00", "24:00")
   cr.hourly$Alias <- factor(cr.hourly$Alias, c(gr1, gr2, gr3))
   
   
@@ -113,7 +117,7 @@ schoolchart <- function(school, start, end) {
     geom_line(data=o.hourly, aes(x=Time, y=value), color="dimgrey", alpha=0.6, size=0.7) +
     geom_line(data=cr.hourly, aes(x=Time, y=value, group=Alias, color=Alias), size=0.4, alpha=0.6) + 
     facet_wrap(~Month, drop=FALSE, ncol=12) +
-    scale_color_manual(name="", values=c(rep("#FC4F30", times=length(gr1)), rep("#E69720", times=length(gr2)), rep("royalblue1", times=length(gr3)))) + 
+    scale_color_manual(name="", values=c(rep("#FF2700", times=length(gr1)), rep("#E69720", times=length(gr2)), rep("dodgerblue4", times=length(gr3)))) + 
     scale_y_continuous(breaks=seq(60,110,5), limits=c(65,100), labels=ggdeg(seq(60,110,5))) +
     scale_x_datetime(breaks=bks, labels=labs, limits=lims) +
     ggtitle(bquote(atop(.(plot.title), atop(.(plot.subtitle), "")))) +
@@ -138,7 +142,7 @@ schoolchart <- function(school, start, end) {
     geom_line(data=o.hourly, aes(x=Time, y=value), color="dimgrey", alpha=0.6, size=0.7) +
     geom_line(data=cr.hourly, aes(x=Time, y=value, group=Alias, color=Alias), size=0.4, alpha=0.6) + 
     facet_wrap(~Month, drop=FALSE, ncol=3) +
-    scale_color_manual(name="", values=c(rep("#FC4F30", times=length(gr1)), rep("#E69720", times=length(gr2)), rep("royalblue1", times=length(gr3)))) + 
+    scale_color_manual(name="", values=c(rep("#FF2700", times=length(gr1)), rep("#E69720", times=length(gr2)), rep("dodgerblue4", times=length(gr3)))) + 
     scale_y_continuous(breaks=seq(60,110,5), labels=ggdeg(seq(60,110,5))) +
     scale_x_datetime(breaks=bks, labels=labs, limits=lims) +
     ggtitle(bquote(atop(.(plot.title), atop(.(plot.subtitle), "")))) +

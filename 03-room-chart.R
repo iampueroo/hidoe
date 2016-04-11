@@ -1,4 +1,4 @@
-roomchart <- function(classroomlist, UTCIrange, winddirection, months, start, end) {
+roomchart <- function(classroomlist, UTCIrange, winddirection, start, end) {
   library(readxl)
   library(readr)
   library(googlesheets)
@@ -30,7 +30,7 @@ roomchart <- function(classroomlist, UTCIrange, winddirection, months, start, en
   o.old$Time <- format(strptime(o.old$Datetime_HST, format="%m/%d/%y %H:%M"), format="%H:%M")
   o.old$Month <- factor(format(o.old$Date, "%B"), c("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"))
   o.old$Datetime_HST <- as.POSIXct(paste(o.old$Date, o.old$Time), format="%Y-%m-%d %H:%M")
-  o.old <- o.old[o.old$Date<=as.Date("2014-10-17"),] #use old weather station only for pilot date range
+  o.old <- o.old[o.old$Date<=as.Date("2015-06-23"),] #use old weather station csv until new from Will
   
   o.new <- read_csv(file="~/BOX Sync/HIDOE-Data-Repository/Raw/Weather-Station/20160404-master-weather.csv") #new outdoor
   o.new$Date <- as.Date(o.new$Date_HST, format="%Y-%m-%d")
@@ -79,25 +79,29 @@ roomchart <- function(classroomlist, UTCIrange, winddirection, months, start, en
   }
   
   # Evaluation conditions
-  o.dfs <- lapply(o.dfs, function(x) x[(x$Date >= start.date & x$Date <= end.date) & (x$Month %in% months) & (x$UTCI_F >= min & x$UTCI_F <= max), ])
+  o.dfs <- lapply(o.dfs, function(x) x[(x$Date >= start.date & x$Date <= end.date) & (x$UTCI_F >= min & x$UTCI_F <= max), ])
   
   cro.dfs = list()
   for (i in 1:length(classroomlist)) { cro.dfs[[i]] <- inner_join(cr.dfs[[i]], o.dfs[[i]][,c("closestDatetime", "UTCI_F")], by=c("Datetime_HST" = "closestDatetime")) }
   
   o <- do.call("rbind", o.dfs)
   ggo <- ggplot() +
-    geom_histogram(data=o, aes(x=UTCI_F, y=..count../sum(..count..)), binwidth = 0.01, alpha=0.5) +
+    geom_histogram(data=o, aes(x=UTCI_F, y=..count../sum(..count..), fill=WS_ID), binwidth = 0.01, alpha=0.6) +
     facet_wrap(~WS_ID, ncol=1) +
-    scale_x_continuous(breaks=seq(60,110,5), labels=ggdeg(seq(60,110,5))) +
+    scale_x_continuous(breaks=seq(60,110,2), labels=ggdeg(seq(60,110,2))) +
     labs(x=NULL, y=NULL) +
     theme_bw(base_family="sans") +
-    theme(axis.ticks=element_blank(), legend.position="none", panel.border=element_blank(), legend.key=element_blank(),
+    theme(axis.ticks=element_blank(), panel.border=element_blank(), legend.key=element_blank(),
           text=element_text(color="gray30"),
           plot.title = element_text(hjust = 0, size = rel(1.5), face = "bold"), strip.background=element_blank(),
           plot.margin = unit(c(2, 2, 2, 2), "lines"), 
           strip.text.x = element_text(size = rel(1.1), color="gray30"),
-          axis.text.y=element_blank())
-    
+          axis.text.y=element_blank(), panel.grid.minor = element_blank(), panel.grid.major = element_blank()) +
+    guides(fill=guide_legend(title="Weather Station"))
+  if (length(unique(o$WS_ID))==1) {ggo <- ggo + scale_fill_manual(values ="dimgrey")
+  } else (ggo <- ggo + scale_fill_fivethirtyeight())
+  
+  
   cro <- do.call("rbind", cro.dfs) #combine individual classroom dataframes into single dataframe
   cro <- cro[,c("Datetime_HST", "Alias", "UTCI_F.x", "Time", "UTCI_F.y")]
   colnames(cro) <- c("Datetime_HST", "Alias", "InUTCI_F", "Time", "OutUTCI_F")
@@ -126,9 +130,8 @@ roomchart <- function(classroomlist, UTCIrange, winddirection, months, start, en
     geom_hline(yintercept=min.temp, linetype="dotted", color="black", size=0.5) +
     geom_line(data=o.hourly, aes(x=Time, y=value), color="dimgrey", alpha=0.6, size=1) +
     geom_line(data=cr.hourly, aes(x=Time, y=value, group=Alias, color=Alias), size=1.5, alpha=0.6) + 
-    #annotate("text", x=ggtime("01:00"), y=max+1.98, label=paste(start, "to", end), size=4, color="gray30") +
-    #annotate("text", x=ggtime("03:30"), y=max+1.5, label=pastemonths(months), size=4, color="gray30") +
-    #annotate("text", x=ggtime("00:10"), y=max+1, label=UTCIrange, size=4, color="gray30") +
+    annotate("text", x=ggtime("00:00"), y=max-0.2, label=paste(start, "to", end), size=4, color="gray30") +
+    annotate("text", x=ggtime("00:00"), y=max-0.5, label=UTCIrange, size=4, color="gray30") +
     scale_color_fivethirtyeight() +
     scale_y_continuous(breaks=seq(60,110,5), labels=ggdeg(seq(60,110,5)), limits=c(min, max)) +
     scale_x_datetime(breaks=bks, labels=labs, limits=lims) +
@@ -143,7 +146,7 @@ roomchart <- function(classroomlist, UTCIrange, winddirection, months, start, en
   
   ggc <- direct.label.ggplot(ggc, list("last.qp", cex=1.2, alpha=0.6))
   
-  gg <- arrangeGrob(ggc,ggo, layout_matrix=rbind(c(1), c(1), c(1), c(1), c(2)))
+  gg <- arrangeGrob(ggc,ggo, layout_matrix=rbind(c(1), c(1), c(1), c(1), c(1), c(2)))
   ggsave(filename=paste0("~/dropbox/rh1/hidoe/plots/", gsub("---", "", tolower(gsub(" ", "-", paste(classroomlist, collapse="-")))), ".pdf"), gg, width=30, height=16, units="in")
   
   
