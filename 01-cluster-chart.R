@@ -35,69 +35,31 @@ clusterchart <- function(clustervar, clustervalue) {
   ### Plot 
   ## UTCI
   
-  #calculate heat index  
-  meds <- s %>% group_by(School, Month) %>% summarise(median=median(UTCI_F, na.rm=TRUE)) 
-  meds$index <- ifelse(meds$median>min.temp, "1", "2")
-  meds <- meds %>% group_by(School) %>% summarise(index=min(as.character(index), na.rm=TRUE))
-  s <- inner_join(s, meds[,c("School", "index")], by=c("School"))
-  
   #manipulations for plotting
   summer <- tbl_df(data.frame(Month=c("August", "September", "October", "November", "December", "January", "February", "March", "April", "May", "June", "July"))) %>% mutate(Month = factor(Month, Month))  #manipulations for plotting
   
   plot.subtitle <- "Universal Thermal Climate Index Profile"
   plot.title <- paste0("HIDOE ", clustervar, ": ", clustervalue)
   
-  #school x month
-  #gg <- ggplot() +
-  #  geom_rect(data = summer[summer$Month %in% c("June", "July"),], xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf, fill="gray70", alpha=0.1) +
-  #  geom_hline(yintercept=min.temp, linetype="dotted", color="black", size=0.5) +
-  #  geom_boxplot(data=s, aes(x=School, y=UTCI_F, color=index, fill=index), alpha=0.5, outlier.colour = "transparent", show.legend = FALSE) + #school x month
-  #  facet_grid(~Month, drop=FALSE) + #school x month
-  #  scale_y_continuous(breaks=seq(55,110,5), limits=c(55,110), labels=ggdeg(seq(55,110,5))) +
-  #  scale_color_manual(name="", values=c("2"="royalblue1", "1"="#FC4F30")) +
-  #  scale_fill_manual(name="", values=c("2"="royalblue1", "1"="#FC4F30")) +
-  #  ggtitle(bquote(atop(.(plot.title), atop(.(plot.subtitle), "")))) +
-  #  labs(x=NULL, y=NULL) +
-  #  theme_bw(base_family="sans") +
-  #  theme(axis.text.x=element_text(size=rel(0.8), angle=90, hjust=1, vjust=0.5, color="gray30"), panel.border=element_blank(), legend.key=element_blank(),
-  #        text=element_text(color="gray30"),
-  #        plot.title = element_text(hjust = 0, size = rel(1.5), face = "bold"), strip.background=element_blank(),
-  #        plot.margin = unit(c(2, 2, 2, 2), "lines"), 
-  #        strip.text.x = element_text(size = rel(1.1), color="gray30"))
-  
-  #month x school
-  #gg <- ggplot() +
-  #  geom_hline(yintercept=min.temp, linetype="dotted", color="black", size=0.5) +
-  #  geom_boxplot(data=s, aes(x=Month, y=UTCI_F, color=index, fill=index), alpha=0.5, outlier.colour = "transparent", show.legend = FALSE) + 
-  #  facet_grid(~School, drop=FALSE) + 
-  #  scale_y_continuous(breaks=seq(55,110,5), limits=c(55,110), labels=ggdeg(seq(55,110,5))) +
-  #  scale_color_manual(name="", values=c("2"="royalblue1", "1"="#FC4F30")) +
-  #  scale_fill_manual(name="", values=c("2"="royalblue1", "1"="#FC4F30")) +
-  #  ggtitle(bquote(atop(.(plot.title), atop(.(plot.subtitle), "")))) +
-  #  labs(x=NULL, y=NULL) +
-  #  theme_bw(base_family="sans") +
-  #  theme(axis.text.x=element_text(size=rel(0.8), angle=90, hjust=1, vjust=0.5, color="gray30"), panel.border=element_blank(), legend.key=element_blank(),
-  #        text=element_text(color="gray30"),
-  #        plot.title = element_text(hjust = 0, size = rel(1.5), face = "bold"), strip.background=element_blank(),
-  #        plot.margin = unit(c(2, 2, 2, 2), "lines"), 
-  #        strip.text.x = element_text(size = rel(1.1), color="gray30"))
-  
   #interquartile plot
-  s.monthly <- s %>% group_by(School, Month) %>% mutate(upper = max(UTCI_F, na.rm=TRUE), 
-                                                        lower=min(UTCI_F, na.rm=TRUE), 
-                                                        med=median(UTCI_F, na.rm=TRUE), 
+  s.monthly <- s %>% group_by(School, Month) %>% mutate(med=median(UTCI_F, na.rm=TRUE), 
                                                         uq = quantile(UTCI_F, 0.75, na.rm=TRUE),
-                                                        lq = quantile(UTCI_F, 0.25, na.rm=TRUE)) %>% distinct(School, Month) 
+                                                        lq = quantile(UTCI_F, 0.25, na.rm=TRUE)) %>% mutate(upper=uq+(uq-lq)*1.5,
+                                                                                                            lower=lq-(uq-lq)*1.5) %>% distinct(School, Month) 
+  
+  
+  s.extremes <- inner_join(s, s.monthly[,c("School", "Month", "uq", "lq")], by=c("School", "Month")) %>% filter(., UTCI_F>uq | UTCI_F<lq) %>% mutate(rUTCI_F=round(UTCI_F,2)) %>% distinct(School, Month, rUTCI_F)
   
   gg <- ggplot() +
     geom_hline(yintercept=min.temp, linetype="dotted", color="black", size=0.5) +
-    geom_linerange(data=s.monthly, aes(x=Month, ymin=lower, ymax=upper), color="royalblue1", alpha=0.3, size=1.3) +
-    geom_linerange(data=s.monthly, aes(x=Month, ymin=lq, ymax=uq), color="royalblue1", alpha=0.9, size=1.3) +
+    geom_point(data=s.extremes, aes(x=Month, y=rUTCI_F), color=adjustcolor("royalblue1", alpha.f = 0.2), size=1.6, shape="_") +
+    #geom_linerange(data=s.monthly, aes(x=Month, ymin=lower, ymax=upper), color="royalblue1", alpha=0.3, size=1.5) +
+    geom_linerange(data=s.monthly, aes(x=Month, ymin=lq, ymax=uq), color="royalblue1", alpha=1, size=1.5) +
     geom_point(data=s.monthly, aes(x=Month, y=med), shape='-', size=5, color="wheat4") +
     facet_grid(~School, drop=FALSE) +
     ggtitle(bquote(atop(.(plot.title), atop(.(plot.subtitle), "")))) +
     scale_y_continuous(breaks=seq(60,130,5), limits=c(60,130), labels=ggdeg(seq(60,130,5))) +
-    scale_x_discrete(labels=c("August"="A", "September"="S", "October"="O", "November"="N", "December"="D", "January"="J", "February"="F", "March"="M", "April"="A", "May"="M", "June"="J", "July"="J")) +
+    scale_x_discrete(labels=c("August"="A", "September"="S", "October"="O", "November"="N", "December"="D", "January"="J", "February"="F", "March"="M", "April"="A", "May"="M", "June"="J", "July"="J"), drop=FALSE) +
     labs(x=NULL, y=NULL) +
     theme_bw(base_family="sans") +
     theme(axis.text.x=element_text(size=rel(0.8), color="gray30"), panel.border=element_blank(), legend.key=element_blank(),
