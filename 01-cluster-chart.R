@@ -52,9 +52,9 @@ clusterchart <- function(clustervar, clustervalue) {
   
   gg <- ggplot() +
     geom_hline(yintercept=min.temp, linetype="dotted", color="black", size=0.5) +
-    geom_point(data=s.extremes, aes(x=Month, y=rUTCI_F), color=adjustcolor("royalblue1", alpha.f = 0.2), size=1.6, shape="_") +
-    #geom_linerange(data=s.monthly, aes(x=Month, ymin=lower, ymax=upper), color="royalblue1", alpha=0.3, size=1.5) +
-    geom_linerange(data=s.monthly, aes(x=Month, ymin=lq, ymax=uq), color="royalblue1", alpha=1, size=1.5) +
+    geom_point(data=s.extremes, aes(x=Month, y=rUTCI_F), color=adjustcolor("dodgerblue4", alpha.f = 0.2), size=1.6, shape="_") +
+    #geom_linerange(data=s.monthly, aes(x=Month, ymin=lower, ymax=upper), color="dodgerblue4", alpha=0.3, size=1.5) +
+    geom_linerange(data=s.monthly, aes(x=Month, ymin=lq, ymax=uq), color="dodgerblue4", alpha=1, size=1.5) +
     geom_point(data=s.monthly, aes(x=Month, y=med), shape='-', size=5, color="wheat4") +
     facet_grid(~School, drop=FALSE) +
     ggtitle(bquote(atop(.(plot.title), atop(.(plot.subtitle), "")))) +
