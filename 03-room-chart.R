@@ -1,46 +1,55 @@
-roomchart <- function(classroomlist, UTCIrange, winddirection, start, end) {
+roomchart <- function(classroomlist, temprange, rhrange, windspeedrange, winddirection, start, end, start2=NULL, end2=NULL) {
   library(readxl)
   library(readr)
   library(googlesheets)
+  library(magrittr)
   library(dplyr)
   library(tidyr)
   library(ggplot2)
   library(ggthemes) 
   library(scales)
   library(directlabels)
-  library(grid)
-  library(gridExtra) 
   library(gtable)
+  library(grid)
+  library(gridExtra)
   
   min.temp <- 85
   start.date <- as.Date(start, format="%m-%d-%Y")
   end.date <- as.Date(end, format="%m-%d-%Y")
-  min <- as.numeric(sub("(.*)-(.*)", "\\1", UTCIrange)) 
-  max <- as.numeric(sub(".*-(.*)", "\\1", UTCIrange)) 
+  if (!is.null(start2)) { start.date2 <- as.Date(start2, format="%m-%d-%Y") }
+  if (!is.null(end2)) { end.date2 <- as.Date(end2, format="%m-%d-%Y") }
   
+  #derive min/max of criteria
+  minT <- as.numeric(sub("(.*)-.*", "\\1", temprange)) 
+  maxT <- as.numeric(sub(".*-(.*)", "\\1", temprange)) 
+  minRH <- as.numeric(sub("(.*)-.*", "\\1", rhrange)) 
+  maxRH <- as.numeric(sub(".*-(.*)", "\\1", rhrange)) 
+  minW <- as.numeric(sub("(.*)-.*", "\\1", windspeedrange)) 
+  maxW <- as.numeric(sub(".*-(.*)", "\\1", windspeedrange)) 
+  
+  
+  ###Input data 
   sheets <- gs_ls() #google sheets
-  gs <- gs_title("MASTER-sensor-weather-deployment") %>% gs_read(ws = "site-list") 
+  gs <- gs_title("MASTER-sensor-weather-deployment") %>% gs_read(ws = "School List") 
   if (end.date <= as.Date("10-17-2014", format="%m-%d-%Y")) {wslist = rep(list("KHIEWABE3"), times=length(classroomlist))
   } else { wslist <- lapply(classroomlist, function(x) as.character(gs[gs$School==getschool(x), c("Closest WS - Any")])) }
   
-  o.old <- read_csv(file="~/BOX Sync/HIDOE-Data-Repository/Raw/Weather-Station/HNEI_EwaWeather_Raw_Full.csv") #outdoor - pilot 
-  o.old <- o.old[o.old$WS_ID %in% wslist,c("Hawaii Time (-10 Hours)", "Temp_F", "UTCI_F", "WS_ID")] #restrict to weather station
-  colnames(o.old) <- c("Datetime_HST", "Temp_F", "UTCI_F", "WS_ID")
-  o.old$Date <- as.Date(o.old$Datetime_HST, format="%m/%d/%y")
-  o.old$Time <- format(strptime(o.old$Datetime_HST, format="%m/%d/%y %H:%M"), format="%H:%M")
-  o.old$Month <- factor(format(o.old$Date, "%B"), c("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"))
-  o.old$Datetime_HST <- as.POSIXct(paste(o.old$Date, o.old$Time), format="%Y-%m-%d %H:%M")
-  o.old <- o.old[o.old$Date<=as.Date("2015-06-23"),] #use old weather station csv until new from Will
+  #o.old <- read_csv(file="~/BOX Sync/HIDOE-Data-Repository/Raw/Weather-Station/HNEI_EwaWeather_Raw_Full.csv") #outdoor - pilot 
+  #o.old <- o.old[o.old$WS_ID %in% wslist,c("Hawaii Time (-10 Hours)", "Temp_F", "RH", "Wind Speed", "Wind Dir", "UTCI_F", "WS_ID")] #restrict to weather station
+  #colnames(o.old) <- c("Datetime_HST", "Temp_F", "RH", "Windspeed", "Winddir", "UTCI_F", "WS_ID")
+  #o.old$Date <- as.Date(o.old$Datetime_HST, format="%m/%d/%y")
+  #o.old$Time <- format(strptime(o.old$Datetime_HST, format="%m/%d/%y %H:%M"), format="%H:%M")
+  #o.old$Month <- factor(format(o.old$Date, "%B"), c("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"))
+  #o.old$Datetime_HST <- as.POSIXct(paste(o.old$Date, o.old$Time), format="%Y-%m-%d %H:%M")
+  #o.old <- o.old[o.old$Date<=as.Date("2015-06-23"),] #use old weather station csv until new from Will
   
-  o.new <- read_csv(file="~/BOX Sync/HIDOE-Data-Repository/Raw/Weather-Station/20160404-master-weather.csv") #new outdoor
-  o.new$Date <- as.Date(o.new$Date_HST, format="%Y-%m-%d")
-  o.new$Time <- format(strptime(o.new$Time_HST, format="%Y-%m-%d %H:%M:%S"), format="%H:%M")
-  o.new$Month <- factor(format(o.new$Date, "%B"), c("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"))
-  o.new$Datetime_HST <- as.POSIXct(paste(o.new$Date, o.new$Time), format="%Y-%m-%d %H:%M")
-  o.new <- temp2utci(o.new, "Temp_F", "RH", "Windspeed") #calculate UTCI
-  o.new <- o.new[o.new$WS_ID %in% wslist, c("Datetime_HST", "Temp_F", "UTCI_F", "WS_ID", "Date", "Time", "Month")]
-  
-  o <- rbind(o.old, o.new)
+  o <- read_csv(file="~/BOX Sync/HIDOE-Data-Repository/Raw/Weather-Station/20160404-master-weather.csv") #new outdoor
+  o$Date <- as.Date(o$Date_HST, format="%Y-%m-%d")
+  o$Time <- format(strptime(o$Time_HST, format="%Y-%m-%d %H:%M:%S"), format="%H:%M")
+  o$Month <- factor(format(o$Date, "%B"), c("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"))
+  o$Datetime_HST <- as.POSIXct(paste(o$Date, o$Time), format="%Y-%m-%d %H:%M")
+  o <- temp2utci(o, "Temp_F", "RH", "Windspeed") #calculate UTCI
+  o <- o[o$WS_ID %in% wslist, c("Datetime_HST", "Temp_F", "RH", "Windspeed", "UTCI_F", "WS_ID", "Date", "Time", "Month")]
   
   setwd("~/BOX Sync/HIDOE-Data-Repository/Processed/") 
   file <- list.files(pattern = "\\.csv$")[[length(list.files(pattern = "\\.csv$"))]]
@@ -62,78 +71,93 @@ roomchart <- function(classroomlist, UTCIrange, winddirection, start, end) {
   o <- o[complete.cases((o)),] 
   cr <- cr[complete.cases((cr)),]
   
-  #individual by classroom
+  ## Split by classroom
   cr.dfs <- split(cr, cr$Alias)
   o.dfs.temp <- split(o, o$WS_ID)
   o.dfs = list()
+  for (i in 1:length(wslist)) { o.dfs[[i]] <- o.dfs.temp[[wslist[[i]]]] }
+  
+  #Set up comparison method
+  if (length(classroomlist)==1) { #before and after of same classroom
+    stopifnot(!is.null(start2), !is.null(end2))
+    o.dfs.temp <- o.dfs
+    o.dfs <- list()
+    o.dfs[[1]] <- o.dfs.temp[[1]] %>% filter(., Date >= start.date & Date <= end.date)
+    o.dfs[[2]] <- o.dfs.temp[[1]] %>% filter(., Date >= start.date2 & Date <= end.date2)
+    
+    cr.dfs.temp <- cr.dfs
+    cr.dfs <- list()
+    cr.dfs[[1]] <- cr.dfs.temp[[1]] %>% filter(., Date >= start.date & Date <= end.date)
+    cr.dfs[[2]] <- cr.dfs.temp[[1]] %>% filter(., Date >= start.date2 & Date <= end.date2)
+  } else if (!is.null(start2) & !is.null(end2)) { #before/after with different classrooms
+    o.dfs[[1]] <- o.dfs[[1]] %>% filter(., Date >= start.date & Date <= end.date)
+    o.dfs[[2]] <- o.dfs[[2]] %>% filter(., Date >= start.date2 & Date <= end.date2)
+    
+    cr.dfs[[1]] <- cr.dfs[[1]] %>% filter(., Date >= start.date & Date <= end.date)
+    cr.dfs[[2]] <- cr.dfs[[2]] %>% filter(., Date >= start.date2 & Date <= end.date2)
+  } else { # two classrooms
+    o.dfs <- lapply(o.dfs, function(x) x[(x$Date >= start.date & x$Date <= end.date), ]) 
+    cr.dfs <- lapply(cr.dfs, function(x) x[(x$Date >= start.date & x$Date <= end.date), ])
+  }
+  
+  #Evaluation conditions
+  eval <- list()
+  samplesizes <- list()
   for (i in 1:length(wslist)) {
-    ws <- wslist[[i]]
-    o.dfs[[i]] <- o.dfs.temp[[ws]] 
+    eval[[i]] <- o.dfs[[i]] %>% arrange(., Datetime_HST) %>% group_by(Date) %>% mutate(., tu = c(0, difftime(tail(Datetime_HST, -1), head(Datetime_HST, -1)))/60) %>% mutate(., Hour=sub("(.*):.*", "\\1", Time)) %>%
+      group_by(Date, Hour) %>% summarize(avgT=mean(Temp_F),
+                                         avgRH=mean(RH),
+                                         avgW=mean(Windspeed)) %>% mutate(., tu = ifelse((avgT >= minT   & avgT <= maxT  ) &
+                                                                                           (avgRH >= minRH & avgRH <= maxRH) &
+                                                                                           (avgW >= minW   & avgW <= maxW  ),1,0)) %>% filter(., as.character(Hour) %in% c("08", "09", "10", "11", "12", "13")) %>% group_by(Date) %>% summarize(tus=sum(tu)) %>%
+      filter(.,tus >= 4) #at least 4 school hours where average meets evaluation criteria
+    
+    cr.dfs[[i]] <- inner_join(cr.dfs[[i]], eval[[i]][,c("Date")], by=c("Date"))
+    o.dfs[[i]] <- inner_join(o.dfs[[i]], eval[[i]][,c("Date")], by=c("Date"))
+    
+    samplesizes[[i]] <- length(unique(o.dfs[[i]]$Date))
   }
   
-  ints <- lapply(cr.dfs, function(x) unique(x$Datetime_HST))
-  reg.ints = list()
-  for (i in 1:length(ints)) { 
-    reg.ints[[i]] <- tbl_df(data.frame(Datetime_HST=ints[[i]])) %>% arrange(Datetime_HST)  #create regular interval data on closest match 
-    o.dfs[[i]]$closestDatetime <- reg.ints[[i]]$Datetime_HST[findInterval(o.dfs[[i]]$Datetime_HST, c(-Inf, head(reg.ints[[i]]$Datetime_HST,-1)) + c(0, diff(as.numeric(reg.ints[[i]]$Datetime_HST))/2))]
-  }
+  o <- do.call("rbind", o.dfs) %>% do(unique(.)) #combine individual dataframes into single dataframe
+  cr <- do.call("rbind", cr.dfs) %>% do(unique(.)) 
   
-  # Evaluation conditions
-  o.dfs <- lapply(o.dfs, function(x) x[(x$Date >= start.date & x$Date <= end.date) & (x$UTCI_F >= min & x$UTCI_F <= max), ])
-  
-  cro.dfs = list()
-  for (i in 1:length(classroomlist)) { cro.dfs[[i]] <- inner_join(cr.dfs[[i]], o.dfs[[i]][,c("closestDatetime", "UTCI_F")], by=c("Datetime_HST" = "closestDatetime")) }
-  
-  o <- do.call("rbind", o.dfs)
-  ggo <- ggplot() +
-    geom_histogram(data=o, aes(x=UTCI_F, y=..count../sum(..count..), fill=WS_ID), binwidth = 0.01, alpha=0.6) +
-    facet_wrap(~WS_ID, ncol=1) +
-    scale_x_continuous(breaks=seq(60,110,2), labels=ggdeg(seq(60,110,2))) +
-    labs(x=NULL, y=NULL) +
-    theme_bw(base_family="sans") +
-    theme(axis.ticks=element_blank(), panel.border=element_blank(), legend.key=element_blank(),
-          text=element_text(color="gray30"),
-          plot.title = element_text(hjust = 0, size = rel(1.5), face = "bold"), strip.background=element_blank(),
-          plot.margin = unit(c(2, 2, 2, 2), "lines"), 
-          strip.text.x = element_text(size = rel(1.1), color="gray30"),
-          axis.text.y=element_blank(), panel.grid.minor = element_blank(), panel.grid.major = element_blank()) +
-    guides(fill=guide_legend(title="Weather Station"))
-  if (length(unique(o$WS_ID))==1) {ggo <- ggo + scale_fill_manual(values ="dimgrey")
-  } else (ggo <- ggo + scale_fill_fivethirtyeight())
-  
-  
-  cro <- do.call("rbind", cro.dfs) #combine individual classroom dataframes into single dataframe
-  cro <- cro[,c("Datetime_HST", "Alias", "UTCI_F.x", "Time", "UTCI_F.y")]
-  colnames(cro) <- c("Datetime_HST", "Alias", "InUTCI_F", "Time", "OutUTCI_F")
-  
-  cr <- cro[,c("Datetime_HST", "Alias", "Time", "InUTCI_F")]
-  o.int <- cro[,c("Datetime_HST", "Time", "OutUTCI_F")]
-  o.int$Alias <- "Outdoor"
-  
-  
-  cr.hourly <- cr %>% group_by(Alias, Time) %>% summarise(avgUTCI=mean(InUTCI_F, na.rm=TRUE)) %>% gather(variable, value, -Alias, -Time)
-  o.hourly <- o.int %>% group_by(Time) %>% summarize(avgUTCI=mean(OutUTCI_F, na.rm=TRUE)) %>% gather(variable, value, -Time)
+  o.hourly <- o %>% group_by(WS_ID, Time) %>% summarize(avgUTCI=mean(UTCI_F), avgTemp=mean(Temp_F), avgRH=mean(RH), avgWindspeed=mean(Windspeed)) %>% gather(variable, value, -WS_ID, -Time)
+  cr.hourly <- cr %>% group_by(Alias, Time) %>% summarise(avgUTCI=mean(UTCI_F)) %>% gather(variable, value, -Alias, -Time)
   
   #Manipulations for plotting
-  o.hourly$Time <- as.POSIXct(o.hourly$Time, format="%H:%M", tz="UTC")
-  cr.hourly$Time <- as.POSIXct(cr.hourly$Time, format="%H:%M", tz="UTC")
+  o.hourly$Time <- ggtime(o.hourly$Time)
+  cr.hourly$Time <- ggtime(cr.hourly$Time)
   lims <- ggtime(c("0:00", "23:59"))
-  lims[2] <- lims[2] + 3*60*60 #add hours to make space for labels
+  lims[2] <- lims[2] + 1.5*60*60 #add hours to make space for labels
   bks <- ggtime(c("0:00", "02:00", "04:00", "06:00", "08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "16:00", "18:00", "20:00", "22:00", "23:59:99"))
-  labs <- c("0:00", rep("", 3), "8:00", rep("", 5), "14:00", rep("", 4), "24:00")
+  labs <- c("00:00", rep("", 3), "08:00", rep("", 5), "14:00", rep("", 4), "24:00")
   
-  plot.title <- "Classroom Comparison"
-  plot.subtitle <- "Universal Thermal Climate Index"
+  ann <- tbl_df(data.frame(Time=ggtime("02:00"),  UTCI_F=40.5,  lab = paste0(format(start.date, "%b %d %Y"), " to ", format(end.date, "%b %d %Y"))))
+  
+  plot.title <- pasteblock(classroomlist)
+  plot.subtitle <- "Universal Thermal Climate Index Comparison"
   ## add conditios in annotation
   
-  ggc <- ggplot() +
-    geom_hline(yintercept=min.temp, linetype="dotted", color="black", size=0.5) +
-    geom_line(data=o.hourly, aes(x=Time, y=value), color="dimgrey", alpha=0.6, size=1) +
+  ggu <- ggplot() +
+    annotate("rect", xmin = ggtime("08:00"), xmax = ggtime("14:00"), ymin = -Inf, ymax = Inf, fill="gray70", alpha=0.1) +
+    geom_smooth(data=o.hourly[o.hourly$variable %in% c("avgUTCI", "avgTemp"), ], aes(x=Time, y=value, linetype=variable, size=variable), color="dimgrey", alpha=0.6, se=FALSE, method="loess", span=0.1) +
+    geom_smooth(data=o.hourly[o.hourly$variable=="avgRH", ], aes(x=Time, y=value), color="#77AB43", alpha=0.6, size=0.5, linetype="dashed", se=FALSE, method="loess", span=0.1) +
     geom_line(data=cr.hourly, aes(x=Time, y=value, group=Alias, color=Alias), size=1.5, alpha=0.6) + 
-    annotate("text", x=ggtime("00:00"), y=max-0.2, label=paste(start, "to", end), size=4, color="gray30") +
-    annotate("text", x=ggtime("00:00"), y=max-0.5, label=UTCIrange, size=4, color="gray30") +
+    annotate("text", x=ggtime("00:05"), y=maxT-0.2, label=paste0(format(start.date, "%b %d %Y"), " to ", format(end.date, "%b %d %Y")), size=4, color="gray30", hjust="left", fontface="bold") + 
+    annotate("text", x=ggtime("00:05"), y=maxT-1.2, label=paste0(wslist[[1]], ": ", samplesizes[[1]], " days"), size=3.5, color="gray30", hjust="left") +
+    annotate("text", x=ggtime("00:05"), y=maxT-2.2, label=paste0(wslist[[2]], ": ", samplesizes[[2]], " days"), size=3.5, color="gray30", hjust="left") +
+    annotate("text", x=lims[2], y=110, label="110%", size=3.5, color="#77AB43") +
+    annotate("text", x=lims[2], y=100, label="100%", size=3.5, color="#77AB43") +
+    annotate("text", x=lims[2], y=90, label="90%", size=3.5, color="#77AB43") +
+    annotate("text", x=lims[2], y=80, label="80%", size=3.5, color="#77AB43") +
+    annotate("text", x=lims[2], y=70, label="70%", size=3.5, color="#77AB43") +
+    annotate("text", x=lims[2], y=60, label="60%", size=3.5, color="#77AB43") +
+    annotate("text", x=lims[2], y=50, label="50%", size=3.5, color="#77AB43") +
+    annotate("text", x=lims[2], y=40, label="40%", size=3.5, color="#77AB43") +
     scale_color_fivethirtyeight() +
-    scale_y_continuous(breaks=seq(60,110,5), labels=ggdeg(seq(60,110,5)), limits=c(min, max)) +
+    scale_linetype_manual(name="", values=c("avgUTCI"="solid", "avgTemp"="dashed")) +
+    scale_size_manual(name="", values=c("avgUTCI"=1, "avgTemp"=0.5)) +
+    scale_y_continuous(breaks=seq(50,100,10), labels=ggdeg(seq(50,100,10)), limits = c(minRH, maxT)) +
     scale_x_datetime(breaks=bks, labels=labs, limits=lims) +
     ggtitle(bquote(atop(.(plot.title), atop(.(plot.subtitle), "")))) +
     labs(x=NULL, y=NULL) +
@@ -141,14 +165,41 @@ roomchart <- function(classroomlist, UTCIrange, winddirection, start, end) {
     theme(axis.ticks=element_blank(), legend.position="none", panel.border=element_blank(), legend.key=element_blank(),
           text=element_text(color="gray30"),
           plot.title = element_text(hjust = 0, size = rel(1.5), face = "bold"), strip.background=element_blank(),
+          plot.margin = unit(c(2, 2, 2, 2), "lines"))
+  
+  ggu <- direct.label.ggplot(ggu, list("last.qp", cex=1, alpha=0.6))
+  
+  ggw <- ggplot() +
+    geom_smooth(data=o.hourly[o.hourly$variable=="avgWindspeed", ], aes(x=Time, y=value), color="#E5AE38", alpha=0.6, size=0.5, se=FALSE, method="loess", span=0.1, linetype="dashed") +
+    scale_y_continuous(breaks=seq(0,30,5), labels=ggmph(seq(0,30,5)), limits=c(0,20)) +
+    scale_x_datetime(breaks=bks, labels=labs, limits=lims) +
+    labs(x=NULL, y=NULL) +
+    theme_bw(base_family="sans") +
+    theme(axis.ticks=element_blank(), legend.position="none", panel.border=element_blank(), legend.key=element_blank(),
+          plot.title = element_text(hjust = 0, size = rel(1.5), face = "bold"), strip.background=element_blank(),
           plot.margin = unit(c(2, 2, 2, 2), "lines"), 
-          strip.text.x = element_text(size = rel(1.1), color="gray30"))
+          axis.text.x = element_blank(),
+          panel.background = element_rect(fill=NA), panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.border = element_blank(),
+          axis.text = element_text(colour="#E5AE38"))
   
-  ggc <- direct.label.ggplot(ggc, list("last.qp", cex=1.2, alpha=0.6))
+  g1 <- ggplot_gtable(ggplot_build(ggu)) #extract gtable
+  g2 <- ggplot_gtable(ggplot_build(ggw))
+  pp <- c(subset(g1$layout, name == "panel", se = t:r)) #overlay second plot on first
+  g <- gtable_add_grob(g1, g2$grobs[[which(g2$layout$name == "panel")]], pp$t, pp$l, pp$b, pp$l)
   
-  gg <- arrangeGrob(ggc,ggo, layout_matrix=rbind(c(1), c(1), c(1), c(1), c(1), c(2)))
-  ggsave(filename=paste0("~/dropbox/rh1/hidoe/plots/", gsub("---", "", tolower(gsub(" ", "-", paste(classroomlist, collapse="-")))), ".pdf"), gg, width=30, height=16, units="in")
+  # axis tweaks
+  ia <- which(g2$layout$name == "axis-l")
+  ga <- g2$grobs[[ia]]
+  ax <- ga$children[[2]]
+  ax$widths <- rev(ax$widths)
+  ax$grobs <- rev(ax$grobs)
+  #ax$grobs[[1]]$x <- ax$grobs[[1]]$x - unit(1, "npc") + unit(0.15, "cm")
+  g <- gtable_add_cols(g, g2$widths[g2$layout[ia, ]$l], length(g$widths) - 1)
+  g <- gtable_add_grob(g, ax, pp$t, length(g$widths) - 1, pp$b)
   
+  pdf(paste0("~/dropbox/rh1/hidoe/plots/", gsub("---", "", tolower(gsub(" ", "-", paste(classroomlist, collapse="-")))), ".pdf"), width=30, height=16)
+  plot(g)
+  dev.off()
   
 }
 
@@ -390,6 +441,9 @@ ggdeg <- function(x) {
 getschool <- function(classroom) {
   return(sub("(.*) -.*", "\\1", classroom))
 }
-pastemonths <- function(x) {
+pasteblock <- function(x) {
   return(paste(x, sep="", collapse=", "))
+}
+ggmph <- function(x) {
+  return(paste(x, " mph", sep = ""))
 }
