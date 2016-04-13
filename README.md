@@ -1,16 +1,17 @@
 # HIDOE Thermal Comfort
 =======================
-##### AverageTempPlot.R
-  > School day/hour temperatures for input classroom comparisons
-  
-    1. Averaged by month and time for all observations
-    2. Averaged by month and time for observations where outside temperature is above "minTemp"
-    3. On the day where the maximum temperature differential occurs, for each month
+##### 01-cluster-chart.R
+  > modified box plots by month/school for specified cluster (e.g. Island: Oahu)
     
-##### OverviewPlot.R
-  > School day/hour overview plots for input school
+##### 02-school-chart.R
+  > UTCI of average day by month
   
-    1. Averaged by date for 2013-2014 year
-    2. Hours of school day hotter than 85 F
-    3. Averaged by hour
+    1. 00:00 - 24:00
+    2. 08:00 - 14:00
 
+##### 03-room-chart.R
+  > comparison of UTCI of average day on similar day types (e.g. summer Kona, winter trade)
+  
+    1. 2 different classrooms compared over same date range
+    2. 2 different classrooms compared over different date ranges
+    3. same classroom compared over different date ranges
