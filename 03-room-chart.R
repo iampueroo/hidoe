@@ -79,6 +79,7 @@ roomchart <- function(classroomlist, temprange, rhrange, windspeedrange, winddir
   
   #Set up comparison method
   if (length(classroomlist)==1) { #before and after of same classroom
+    method <- "B/A same classroom"
     stopifnot(!is.null(start2), !is.null(end2))
     o.dfs.temp <- o.dfs
     o.dfs <- list()
@@ -90,12 +91,14 @@ roomchart <- function(classroomlist, temprange, rhrange, windspeedrange, winddir
     cr.dfs[[1]] <- cr.dfs.temp[[1]] %>% filter(., Date >= start.date & Date <= end.date)
     cr.dfs[[2]] <- cr.dfs.temp[[1]] %>% filter(., Date >= start.date2 & Date <= end.date2)
   } else if (!is.null(start2) & !is.null(end2)) { #before/after with different classrooms
+    method <- "B/A different classroom"
     o.dfs[[1]] <- o.dfs[[1]] %>% filter(., Date >= start.date & Date <= end.date)
     o.dfs[[2]] <- o.dfs[[2]] %>% filter(., Date >= start.date2 & Date <= end.date2)
     
     cr.dfs[[1]] <- cr.dfs[[1]] %>% filter(., Date >= start.date & Date <= end.date)
     cr.dfs[[2]] <- cr.dfs[[2]] %>% filter(., Date >= start.date2 & Date <= end.date2)
   } else { # two classrooms
+    method <- "different classroom"
     o.dfs <- lapply(o.dfs, function(x) x[(x$Date >= start.date & x$Date <= end.date), ]) 
     cr.dfs <- lapply(cr.dfs, function(x) x[(x$Date >= start.date & x$Date <= end.date), ])
   }
