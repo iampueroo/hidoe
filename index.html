@@ -4,155 +4,180 @@
         <meta charset="utf-8">
         <title>HIDOE Thermal Comfort Analysis</title>
         <script type="text/javascript" src="d3/d3.js"></script>
-        <script type="text/javascript" src="science.js-master/science.v1.js"></script>
+        <script type="text/javascript" src="https://d3js.org/d3-queue.v2.min.js"></script>
         <style type="text/css">
+
+            .line {
+                fill: none;
+                stroke: #104E8B;
+                stroke-width: 0.4px;
+                opacity: 0.6;
+            }
 
             body {
                 font-family: Helvetica;
-                font-size: 10px;
+                font-size: 9px;
                 color: #535353;
             }
 
-            h2 {
-                margin-left: 10px;
-            }
-            
             .axis path,
             .axis line {
                 fill: none;
                 stroke: dimgrey;
                 shape-rendering: crispEdges;
             }
+
             .axis text {
                 font-family: Helvetica;
-                font-size: 10px;
-                color: #535353;
-                    
-            }
-
-
-            .tooltip {	
-                position: absolute;			    
-                text-align: center;			
                 font-size: 8px;
-                width: 100px;					
-                height: 28px;					
-                padding: 2px;				
-                border: 0px;		
-                border-radius: 8px;			
-                pointer-events: none;			
-            }
-            
-            .button {
-                float: left;
-                margin-left: 20px;
-                font-weight: lighter;
-                cursor: pointer;
-                
+                color: #535353;
+                stroke-width: 0.2px;
             }
 
-            .buttons-container {
-                width: 500;
-                margin-bottom: 20px;
+            h2 {
+                margin-left: 10px;
             }
 
-            .selected {
-                font-weight: bold;
+            .tooltip {
+                position: absolute;
+                text-align: center;
+                font-size: 8px;
+                width: 100px;
+                height: 28px;
+                padding: 2px;
+                border: 1px;
+                border-radius: 8px;
+                pointer-events: none;
             }
+
+
 
         </style>
     </head>
     <body>
         <script type="text/javascript">
-            var school = "Campbell";
-            var schools = ["Campbell", "Ilima", "Kaimiloa"];
 
-            var margin = {top: 50, right: 50, bottom: 50, left: 50};
-            var w = 1000 - margin.left - margin.right;
-            var h = 600 - margin.top - margin.bottom; 
+        d3.select("body")
+            .append("h2")
+            .text("Universal Thermal Climate Index Profile");
 
 
-            d3.select("body")
-                .append("h2")
-                .text("Daily Universal Thermal Climate Index (UTCI) Profile");
-
-            var buttons = d3.select("body")
-                .append("div")
-                .attr("class", "buttons-container")
-                .selectAll("div")
-                .data(schools)
-                .enter()
-                .append("div")
-                .text(function(d) { return d; })
-                .attr("class", function(d) {
-                    if (d == school)
-                        return "button selected";
-                    else 
-                        return "button";
-                });
+	    var lineClasses = {"August":"August", "September":"September", "October":"October", "November":"November",
+			               "December":"December", "January":"January", "March":"March", "February":"February",
+			               "April":"April", "May":"May", "June":"June", "July":"July"};
 
 
+        var margin = {top: 50, right: 10, bottom: 10, left: 10};
+        var w = 130 - margin.left - margin.right;
+        var h = 500 - margin.top - margin.bottom; 
+        var parser = d3.time.format("%H:%M");
 
-            //create SVG element
-            var svg = d3.select("body")
-                .append("svg")
-                    .attr("width", w + margin.left + margin.right)
-                    .attr("height", h + margin.bottom + margin.top)
-                .append("g")
-                    .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
-	                .attr("width", w)
-	                .attr("height", h)
-
-            var toolTip = d3.select("body").append("div")	
-                .attr("class", "tooltip")				
-                .style("opacity", 0);
+        // x-axis limits
+        minTime = parser.parse("00:00");
+        maxTime = parser.parse("24:00")
 
 
-            var parser = d3.time.format("%Y-%m-%d");
-            
-			//Define key function, to be used when binding data
-			var key = function(d) {
-				return d.ID;
-			};
+        //create scales
+        var xScale =  d3.time.scale()
+                            .range([0,w]);
+        var yScale = d3.scale.linear()
+                            .domain([60, 110]) //y-axis limits
+                            .range([h,0]);
+        // line function
+	    var line = d3.svg.line()
+                    .x(function(d) { return xScale(d.Time); })
+            		.y(function(d) { return yScale(d.UTCI_F); });
 
-
-            var daily; 
-            d3.csv("daily.csv", function(error, data) { //load data
-                if (error) return console.log(error);
-                daily = data;
-                daily.forEach (function(d) { 
-                    d.Date = parser.parse(d.Date); //convert to date format
-                    d.value = +d.value; //convert to numeric
-                    d.smooth = +d.smooth; //convert to numeric
-                });
-
-                // subset by school
-                daily = data.filter(function(d) { return (d.School == school || d.School == "Outdoor"); });
-                console.log(daily);
-                                
-                
-
-                //create scales
-                var minDate = d3.time.day.offset(daily[0].Date, -10); //with padding 
-                var maxDate = d3.time.day.offset(daily[daily.length-1].Date,10);
-    
-                var xScale =  d3.time.scale()
-                                 .domain([minDate, maxDate])
-                                 .range([0,w]);
-                var yScale = d3.scale.linear()
-                                 .domain([60, 110])
-                                 .range([h,0]);
-
-                //create axes 
-                var xAxis = d3.svg.axis()
-                            .scale(xScale)
-                            .orient("bottom")
-                            .ticks(10);
+	                
+        //create axes 
+        var xAxis = d3.svg.axis()
+            .scale(xScale)
+            .orient("bottom")
+            .ticks(4);
         
-                var yAxis = d3.svg.axis()
-                            .scale(yScale)
-                            .orient("left")
-                            .ticks(15);
+        var yAxis = d3.svg.axis()
+            .scale(yScale)
+            .orient("left")
+            .ticks(10);
+
+        var toolTip = d3.select("body").append("div")
+                        .attr("class", "tooltip")
+                        .style("opacity", 0);
+
+
+
+
+        var schooldat;
+	    var nestschooldat;
+        d3.csv("data/d3-school.csv", function(error, data) { //load data
+            if (error) return console.log(error);
+            schooldat = data;
+		    schooldat = data.filter(function(d) { return (d.School == "Kaimiloa El"); });
+
+            schooldat.forEach (function(d) { 
+                d.Time = parser.parse(d.Time); //convert to time format
+		       	d.UTCI_F= +d.UTCI_F; //convert to numeric
+            });
+		
+		    nestschooldat = d3.nest() //nest by month
+			    .key(function(d) { return d.Month; })
+			    .key(function(d) { return d.Alias; })
+			    .entries(schooldat);
+
+        	    	
+		var svg = d3.select("body").selectAll("svg") //add svg element for each month
+			.data(nestschooldat)
+			.enter().append("svg")
+			    .attr("width", w + 3*margin.left + margin.right)
+			    .attr("height", h + margin.bottom + margin.top)
+			.append("g")
+			    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+        
+        svg.selectAll("svg")
+            .data(function(d) { return d.values; })
+            .enter().append("path")
+		    .attr("class", "line")
+		    .attr("d", function(d) { 
+                        xScale.domain([minTime, maxTime]);
+					    return line(d.values); })
+            .on("mouseover", function(d) {		
+                toolTip.transition()		
+                    .duration(500)		
+                    .style("opacity", .9)
+                    //.style("color", "#FF2700");		
+                toolTip.html(d.key)	
+                    .style("left", (d3.event.pageX) + "px")		
+                    .style("top", (d3.event.pageY - 28) + "px");	
+            })					
+            .on("mouseout", function(d) {		
+                toolTip.transition()		
+                    .duration(500)		
+                           .style("opacity", 0);	
+                   });
+
+        svg.append("text")
+            .attr("x", w - 6)
+            .attr("y", 6)
+            .style("text-anchor", "end")
+            .text(function(d) { return d.key; });
+/*
+        // draw axes
+        svg.append("g") 
+            .attr("class", "x axis") 
+            .attr("transform", "translate(0," + h + ")")
+            .call(xAxis);
+        svg.append("g") 
+            .attr("class", "y axis") 
+            .attr("transform", "translate(0,0)")
+            .call(yAxis);
+*/
+
+	    });	
+
+
+/*
+                // subset by school
+                                               
                 
                 svg.append("g") //scatter
                     .selectAll("circle") 
@@ -185,12 +210,6 @@
                             .duration(500)		
                             .style("opacity", 0);	
                     });
-
-                var lineFunction = d3.svg.line()
-                                        .interpolate("basis")
-                                        .x(function(d) { return xScale(d.Date); })
-                                        .y(function(d) { return yScale(d.smooth); });
-
                 svg.append("path")
                     .attr("d", lineFunction(daily.filter(function(d) { return (d.variable == "AvgOutdoorUTCI"); })))
                     .attr("stroke", "dimgrey")
@@ -230,7 +249,7 @@
                     .attr("fill", "none")
                     .style("stroke-dasharray", ("5, 5"))
 
-/*
+
                 //loess smoothing 
                 svg.selectAll("path")
                     .data([smoothed])
@@ -254,17 +273,9 @@
                         value: yValue
                     };
                 });
-*/
 
-                // draw axes
-                svg.append("g") 
-                    .attr("class", "x axis") 
-                    .attr("transform", "translate(0," + h + ")")
-                    .call(xAxis);
-                svg.append("g") 
-                    .attr("class", "y axis") 
-                    .attr("transform", "translate(0,0)")
-                    .call(yAxis);
+
+
 
 
                 buttons.on("click", function(d) {
@@ -337,7 +348,7 @@
                 });
 
             });
-       
+       */
 
         </script>
     </body>
