@@ -77,28 +77,26 @@
         <p id="menu">School: <select></select>
         <script type="text/javascript">
 
-
         var margin = {top: 50, right: 10, bottom: 50, left: 50};
         var w = 1000 - margin.left - margin.right;
         var h = 530 - margin.top - margin.bottom; 
         var parser = d3.time.format("%H:%M");
 
-
         var menu = d3.select("#menu select"); //dropdown for school selection
             /*.on("change", change);*/
+
+
         var buttons = d3.select("body") //buttons for months
             .append("div")
             .attr("class", "buttons-container");
 
 
+        bisectTime = d3.bisector(function(d) { return d.Time; }).left; //bisector used for rollover
+        
         // x-axis limits
         minTime = parser.parse("00:00");
         maxTime = parser.parse("24:00");
         
-
-
-        bisectTime = d3.bisector(function(d) { return d.Time; }).left;
-
         //create scales
         var xScale =  d3.time.scale()
                             .domain([minTime, maxTime])
@@ -106,7 +104,8 @@
         var yScale = d3.scale.linear()
                             .range([h,0]);
 
-	    var line = d3.svg.line() // line function
+        // line function
+	    var line = d3.svg.line() 
                     .x(function(d) { return xScale(d.Time); })
             		.y(function(d) { return yScale(d.UTCI_F); });
 
@@ -126,7 +125,6 @@
             .ticks(8)
             .tickSize(-2)
             .tickSubdivide(1);
-
 
         //create SVG element
         var svg = d3.select("body")
@@ -216,24 +214,11 @@
                 .style("opacity", 0.2);
 
 
-
             linesvg.selectAll("svg") //add lines
                 .data(nestschooldat)
                 .enter().append("path")
 		        .attr("class", "line")
 		        .attr("d", function(d) { return line(d.values); });
-                /*
-                .on("mouseover", function(d) {
-                    d3.select(this)
-                        .style("stroke-width", "5px")
-                        .style("stroke", "indianred");
-                })
-                .on("mouseout", function(d) {
-                    d3.select(this)
-                        .style("stroke-width", "0.4px")
-                        .style("stroke", "steelblue");
-                });
-                */
 
             focus.selectAll("svg")
                 .data(nestschooldat)
@@ -267,7 +252,7 @@
 
 
 
-            /*buttons.on("click", function(d) {
+            buttons.on("click", function(d) {
                 d3.select(".selected") //deselect
                     .classed("selected", false);
                 d3.select(this) //select
@@ -275,7 +260,7 @@
                 
                 month = d;
                 var schooldat = data.filter(function(d) { return (d.Month == month); }); //restrict to month clicked
-            }*/
+            }
 
 
 
@@ -283,7 +268,6 @@
                 var x0 = xScale.invert(d3.mouse(this)[0]);
 
                 var nKeys = d3.map(nestschooldat, function(d) { return d.key; }).size(); //number of classrooms 
-
                 for (var j=0; j < nKeys; j++) {
                     var i = bisectTime(nestschooldat[j].values, x0, 1),
                         d0 = nestschooldat[j].values[i-1],
@@ -297,17 +281,6 @@
                         .text(d.Alias + ": " + d3.round(d.UTCI_F,2) + "ºF")
                         .attr("transform", "translate(" + xScale(d.Time) + "," + yScale(d.UTCI_F) + ")");
                 };
-/*
-                    i = bisectTime(nestschooldat[0].values, x0, 1), //use first index because they should be the same interval?
-                    d0 = nestschooldat[0].values[i-1],
-                    d1 = nestschooldat[0].values[i],
-                    d = x0 - d0.Time > d1.Time - x0 ? d1 : d0;
-
-                    focus.selectAll("circle.y")
-                        .attr("transform", "translate(" + xScale(d.Time) + "," + yScale(d.UTCI_F) + ")");
-*/
-                                    
-
             }
                 
 		
@@ -324,80 +297,6 @@
 
 
 /*
-                // subset by school
-                                               
-                
-                svg.append("g") //scatter
-                    .selectAll("circle") 
-                    .data(daily.filter(function(d) { return (d.measure == "UTCI" && d.level != "Outdoor"); }), key)
-                    .enter()
-                    .append("circle")
-                    .attr({
-                        cx: function(d) { return xScale(d.Date); }, //first column
-                        cy: function(d) { return yScale(d.value); }, //second column
-                        r: 1.5,
-                        fill: function(d) {
-                            if (d.measure == "UTCI")
-                                if (d.level == "Average") 
-                                    return "#30A2DA";
-                                else 
-                                    return "#FC4F30";
-                        },
-                        opacity: 0.2
-                    })
-                    .on("mouseover", function(d) {		
-                        toolTip.transition()		
-                            .duration(200)		
-                            .style("opacity", .9);		
-                        toolTip.html(d.Alias + "<br/> UTCI: " + d3.round(d.value,2) + " &deg;F <br/>")	
-                            .style("left", (d3.event.pageX) + "px")		
-                            .style("top", (d3.event.pageY - 28) + "px");	
-                    })					
-                    .on("mouseout", function(d) {		
-                        toolTip.transition()		
-                            .duration(500)		
-                            .style("opacity", 0);	
-                    });
-                svg.append("path")
-                    .attr("d", lineFunction(daily.filter(function(d) { return (d.variable == "AvgOutdoorUTCI"); })))
-                    .attr("stroke", "dimgrey")
-                    .attr("stroke-width", "1.2")
-                    .attr("fill", "none")
-
-                svg.append("path")
-                    .attr("d", lineFunction(daily.filter(function(d) { return (d.variable == "AvgOutdoorTemp"); })))
-                    .attr("stroke", "dimgrey")
-                    .attr("stroke-width", "0.8")
-                    .attr("fill", "none")
-                    .style("stroke-dasharray", ("5, 5"))
-
-                svg.append("path")
-                    .attr("d", lineFunction(daily.filter(function(d) { return (d.variable == "AvgSchoolUTCI"); })))
-                    .attr("stroke", "#30A2DA")
-                    .attr("stroke-width", "1.2")
-                    .attr("fill", "none")
-
-                svg.append("path")
-                    .attr("d", lineFunction(daily.filter(function(d) { return (d.variable == "AvgSchoolTemp"); })))
-                    .attr("stroke", "#30A2DA")
-                    .attr("stroke-width", "0.8")
-                    .attr("fill", "none")
-                    .style("stroke-dasharray", ("5, 5"))
-
-                svg.append("path")
-                    .attr("d", lineFunction(daily.filter(function(d) { return (d.variable == "MaxSchoolUTCI"); })))
-                    .attr("stroke", "#FC4F30")
-                    .attr("stroke-width", "1.2")
-                    .attr("fill", "none")
-
-                svg.append("path")
-                    .attr("d", lineFunction(daily.filter(function(d) { return (d.variable == "MaxSchoolTemp"); })))
-                    .attr("stroke", "#FC4F30")
-                    .attr("stroke-width", "0.8")
-                    .attr("fill", "none")
-                    .style("stroke-dasharray", ("5, 5"))
-
-
                 buttons.on("click", function(d) {
                     d3.select(".selected")
                         .classed("selected", false);
