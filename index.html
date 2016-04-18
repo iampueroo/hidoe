@@ -105,9 +105,9 @@
                             .range([h,0]);
 
         // line function
-	    var line = d3.svg.line() 
-                    .x(function(d) { return xScale(d.Time); })
-            		.y(function(d) { return yScale(d.UTCI_F); });
+        var line = d3.svg.line() 
+            .x(function(d) { return xScale(d.Time); })
+            .y(function(d) { return yScale(d.UTCI_F); });
 
 	                
         //create axes 
@@ -164,7 +164,7 @@
                 .text("average day");
 
        function key(d) {
-           return d.key;
+          // key for data updates 
        }
 
 
@@ -248,7 +248,7 @@
             lines.enter().append("path")
                         .attr("class", "line")
                         .attr("d", function(d) {return line(d.values); });
-/*
+
             focus.selectAll("svg")
                 .data(nestschooldat)
                 .enter().append("circle") //append circle at intersection
@@ -272,11 +272,11 @@
                     .attr("width", w)
                     .attr("height", h)
                         .style("fill", "none")
-                        .style("pointer-events", "all");
+                        .style("pointer-events", "all")
                 .on("mouseover", function() { focus.style("display", null); })
                 .on("mouseout", function() { focus.style("display", "none"); })
                 .on("mousemove", mousemove);
-*/
+
 /*
             // change month
             buttons.on("click", function(d) {
@@ -330,11 +330,6 @@
             //EXIT SELECTION
             lines.exit()
                 .remove();
-
-            //UPDATE LINES SELECTION
-/*            var line = lines.selectAll("svg")
-                .data(function(d) { return d.values; }, function(*/
-
 
 
         }
