@@ -142,6 +142,32 @@
             .attr("class", "focus")
             .style("display", "none");
 
+        //school hours rectangle
+        svg.append("rect") 
+            .attr("class", "schoolhours")
+            .attr("x", xScale(parser.parse("08:00")))
+            .attr("y", 0)
+            .attr("width", xScale(parser.parse("6:00")))
+            .attr("height", h)
+            .style("fill", "wheat")
+            .style("opacity", 0.2);          
+
+        svg.append("g")  //x-axis
+            .attr("class", "x axis") 
+            .attr("transform", "translate(0," + h + ")")
+            .call(xAxis)
+            .append("text")
+                .attr("x", w-6)
+                .attr("y", -6)
+                .attr("dx", ".71em")
+                .style("text-anchor", "end")
+                .text("average day");
+
+       function key(d) {
+           return d.key;
+       }
+
+
         var alldata;
         d3.csv("data/d3-school.csv", function(error, data) { //load data
             if (error) return console.log(error);
@@ -158,28 +184,6 @@
                 .text(function(d) { return d; });
             
             menu.property("value", d3.map(alldata, function(d) {return d.School; }).keys()[0]); //initialize school to first alphabetically
-
-            //school hours rectangle
-            svg.append("rect") 
-                .attr("x", xScale(parser.parse("08:00")))
-                .attr("y", 0)
-                .attr("width", xScale(parser.parse("6:00")))
-                .attr("height", h)
-                .style("fill", "wheat")
-                .style("opacity", 0.2);          
-
-            svg.append("g")  //x-axis
-                .attr("class", "x axis") 
-                .attr("transform", "translate(0," + h + ")")
-                .call(xAxis)
-                .append("text")
-                    .attr("x", w-6)
-                    .attr("y", -6)
-                    .attr("dx", ".71em")
-                    .style("text-anchor", "end")
-                    .text("average day");
-
-
 
             update();
 
@@ -219,35 +223,32 @@
 
             var minTemp = d3.min(monthschooldata, function(d) { return d.UTCI_F; }); //define y domain based on school max min UTCI values
             var maxTemp  = d3.max(monthschooldata, function(d) { return d.UTCI_F; });
-            yScale.domain([minTemp+1, maxTemp-1]);
+            yScale.domain([minTemp-2, maxTemp+2]);
 
 		    nestschooldat = d3.nest() //nest by Alias 
 			    .key(function(d) { return d.Alias; })
 			    .entries(monthschooldata);
 
-            function key(d) {
-                return d.key;
-            }
 
             //ENTER SELECTION
             svg.append("g")  // y-axis 
                 .attr("class", "y axis") 
                 .attr("transform", "translate(0,0)")
-                .call(yAxis);
-                /*.append("text")
+                .call(yAxis)
+                .append("text")
                     .attr("transform", "rotate(-90)")
                     .attr("y", 6)
                     .attr("dy", ".71em")
                     .style("text-anchor", "end")
-                    .text("UTCI (ºF)");*/
+                    .text("UTCI (ºF)");
 
             var lines = linesvg.selectAll("svg")
-                .data(nestschooldat, function(d) { return d.key; });
+                .data(nestschooldat, key);
 
             lines.enter().append("path")
                         .attr("class", "line")
                         .attr("d", function(d) {return line(d.values); });
-
+/*
             focus.selectAll("svg")
                 .data(nestschooldat)
                 .enter().append("circle") //append circle at intersection
@@ -271,11 +272,11 @@
                     .attr("width", w)
                     .attr("height", h)
                         .style("fill", "none")
-                        .style("pointer-events", "all")
+                        .style("pointer-events", "all");
                 .on("mouseover", function() { focus.style("display", null); })
                 .on("mouseout", function() { focus.style("display", "none"); })
                 .on("mousemove", mousemove);
-
+*/
 /*
             // change month
             buttons.on("click", function(d) {
@@ -318,9 +319,9 @@
 */
             
             //UPDATE SELECTION
-/*            lines.transition()
-                .duration(500)
-                .attr("d", function(d) {return line(d.values); });*/
+            lines.transition()
+                .duration(750)
+                .attr("d", function(d) {return line(d.values); });
   
             d3.transition(svg).select(".y.axis")
                 .call(yAxis);
