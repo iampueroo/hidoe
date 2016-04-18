@@ -73,17 +73,17 @@
     <body>
         <h2>Universal Thermal Climate Index Profile</h2>
 
-
+        <p id="chart">
         <p id="menu">School: <select></select>
         <script type="text/javascript">
 
-        var margin = {top: 50, right: 10, bottom: 50, left: 50};
-        var w = 1000 - margin.left - margin.right;
-        var h = 530 - margin.top - margin.bottom; 
+        var margin = {top: 50, right: 50, bottom: 50, left: 50};
+        var w = 1680 - margin.left - margin.right;
+        var h = 700 - margin.top - margin.bottom; 
         var parser = d3.time.format("%H:%M");
 
-        var menu = d3.select("#menu select"); //dropdown for school selection
-            /*.on("change", change);*/
+        var menu = d3.select("#menu select") //dropdown for school selection
+            .on("change", change);
 
 
         var buttons = d3.select("body") //buttons for months
@@ -116,17 +116,16 @@
             .orient("bottom")
             .ticks(15)
             .tickSize(2)
-            .tickSubdivide(1)
             .tickFormat(d3.time.format("%H:%M"));;
         
         var yAxis = d3.svg.axis()
             .scale(yScale)
             .orient("left")
-            .ticks(8)
             .tickSize(-2)
-            .tickSubdivide(1);
 
-        //create SVG element
+
+
+        //---------- create SVG element
         var svg = d3.select("body")
             .append("svg")
                 .attr("width", w + margin.left + margin.right)
@@ -143,48 +142,33 @@
             .attr("class", "focus")
             .style("display", "none");
 
-	    var nestschooldat;
+        var alldata;
         d3.csv("data/d3-school.csv", function(error, data) { //load data
             if (error) return console.log(error);
 
-            school = d3.map(data, function(d) {return d.School; }).keys()[0]; //initialize school
-
-            menu.selectAll("option") //load schools into menu dropdown for selection
-                .data(d3.map(data, function(d) { return d.School; }).keys())
-                .enter().append("option")
-                .text(function(d) { return d; });
-            
-            data = data.filter(function(d) { return (d.School == school); }); //restrict to school selected 
-            month = d3.map(data, function(d) {return d.Month; }).keys()[0]; //initialize month
-
-            buttons.selectAll("div") //buttons for months available by school
-                .data(d3.map(data, function(d) { return d.Month; }).keys())
-                .enter().append("div")
-                .text(function(d) {return d; })
-                .attr("class", function(d) {
-                    if (d == month)
-                        return "button selected";
-                    else
-                        return "button";
-                });
-            
-            var schooldat = data.filter(function(d) { return (d.Month == month); });  //restrict to month clicked
-
-            var minTemp = d3.min(schooldat, function(d) { return d.UTCI_F; }); //define y domain based on school max min UTCI values
-            var maxTemp  = d3.max(schooldat, function(d) { return d.UTCI_F; });
-            yScale.domain([minTemp-5, maxTemp+5]);
-
-            schooldat.forEach (function(d) { 
+            alldata = data;
+            alldata.forEach (function(d) { 
                 d.Time = parser.parse(d.Time); //convert to time format
 		       	d.UTCI_F= +d.UTCI_F; //convert to numeric
             });
-		
-		    nestschooldat = d3.nest() //nest by Alias 
-			    .key(function(d) { return d.Alias; })
-			    .entries(schooldat);
 
-            // draw axes
-            svg.append("g") 
+            menu.selectAll("option") //load schools into menu dropdown for selection
+                .data(d3.map(alldata, function(d) { return d.School; }).keys())
+                .enter().append("option")
+                .text(function(d) { return d; });
+            
+            menu.property("value", d3.map(alldata, function(d) {return d.School; }).keys()[0]); //initialize school to first alphabetically
+
+            //school hours rectangle
+            svg.append("rect") 
+                .attr("x", xScale(parser.parse("08:00")))
+                .attr("y", 0)
+                .attr("width", xScale(parser.parse("6:00")))
+                .attr("height", h)
+                .style("fill", "wheat")
+                .style("opacity", 0.2);          
+
+            svg.append("g")  //x-axis
                 .attr("class", "x axis") 
                 .attr("transform", "translate(0," + h + ")")
                 .call(xAxis)
@@ -193,32 +177,76 @@
                     .attr("y", -6)
                     .attr("dx", ".71em")
                     .style("text-anchor", "end")
-                    .text("average day")
-            svg.append("g") 
+                    .text("average day");
+
+
+
+            update();
+
+
+        });
+
+        var altKey;
+        d3.select(window)
+            .on("keydown", function() { altKey = d3.event.altKey; })
+            .on("keyup", function() { altKey = false; });
+
+        function change() {
+            d3.transition()
+                .duration(altKey ? 7500 : 750)
+                .each(update);
+        }
+
+        function update() {
+            var school = menu.property("value");
+            console.log(school);
+
+            var schooldata = alldata.filter(function(d) { return (d.School == school); })
+            month = d3.map(schooldata, function(d) {return d.Month; }).keys()[0]; //initialize month restricted to selected school
+
+            buttons.selectAll("div") //buttons for months available by school
+                .data(d3.map(schooldata, function(d) { return d.Month; }).keys())
+                .enter().append("div")
+                .text(function(d) {return d; })
+                .attr("class", function(d) {
+                    if (d == month)
+                        return "button selected";
+                    else
+                        return "button";
+                });
+
+            monthschooldata = schooldata.filter(function(d) { return (d.Month == month); });  //restrict to month clicked
+
+            var minTemp = d3.min(monthschooldata, function(d) { return d.UTCI_F; }); //define y domain based on school max min UTCI values
+            var maxTemp  = d3.max(monthschooldata, function(d) { return d.UTCI_F; });
+            yScale.domain([minTemp+1, maxTemp-1]);
+
+		    nestschooldat = d3.nest() //nest by Alias 
+			    .key(function(d) { return d.Alias; })
+			    .entries(monthschooldata);
+
+            function key(d) {
+                return d.key;
+            }
+
+            //ENTER SELECTION
+            svg.append("g")  // y-axis 
                 .attr("class", "y axis") 
                 .attr("transform", "translate(0,0)")
-                .call(yAxis)
-                .append("text")
+                .call(yAxis);
+                /*.append("text")
                     .attr("transform", "rotate(-90)")
                     .attr("y", 6)
                     .attr("dy", ".71em")
                     .style("text-anchor", "end")
-                    .text("UTCI (ºF)");
+                    .text("UTCI (ºF)");*/
 
-            svg.append("rect") //school hours rectangle
-                .attr("x", xScale(parser.parse("08:00")))
-                .attr("y", 0)
-                .attr("width", xScale(parser.parse("6:00")))
-                .attr("height", h)
-                .style("fill", "wheat")
-                .style("opacity", 0.2);
+            var lines = linesvg.selectAll("svg")
+                .data(nestschooldat, function(d) { return d.key; });
 
-
-            linesvg.selectAll("svg") //add lines
-                .data(nestschooldat)
-                .enter().append("path")
-		        .attr("class", "line")
-		        .attr("d", function(d) { return line(d.values); });
+            lines.enter().append("path")
+                        .attr("class", "line")
+                        .attr("d", function(d) {return line(d.values); });
 
             focus.selectAll("svg")
                 .data(nestschooldat)
@@ -248,126 +276,93 @@
                 .on("mouseout", function() { focus.style("display", "none"); })
                 .on("mousemove", mousemove);
 
-
-
-
-
+/*
+            // change month
             buttons.on("click", function(d) {
                 d3.select(".selected") //deselect
                     .classed("selected", false);
                 d3.select(this) //select
                     .classed("selected", true);
-                
+
                 month = d;
-                var schooldat = data.filter(function(d) { return (d.Month == month); }); //restrict to month clicked
-            }
-
-
-
-            function mousemove() {
-                var x0 = xScale.invert(d3.mouse(this)[0]);
-
-                var nKeys = d3.map(nestschooldat, function(d) { return d.key; }).size(); //number of classrooms 
-                for (var j=0; j < nKeys; j++) {
-                    var i = bisectTime(nestschooldat[j].values, x0, 1),
-                        d0 = nestschooldat[j].values[i-1],
-                        d1 = nestschooldat[j].values[i],
-                        d = x0 - d0.Time > d1.Time - x0 ? d1 : d0;
-
-                    focus.select("circle.y"+j)
-                        .attr("transform", "translate(" + xScale(d.Time) + "," + yScale(d.UTCI_F) + ")");
-                    
-                    focus.selectAll("text.t"+j)
-                        .text(d.Alias + ": " + d3.round(d.UTCI_F,2) + "ºF")
-                        .attr("transform", "translate(" + xScale(d.Time) + "," + yScale(d.UTCI_F) + ")");
-                };
-            }
+                console.log(month);
+                monthschooldata = schooldata.filter(function(d) { return (d.Month == month); }); //update month
                 
-		
+                var minTemp = d3.min(monthschooldata, function(d) { return d.UTCI_F; }); //define y domain based on school max min UTCI values
+                var maxTemp  = d3.max(monthschooldata, function(d) { return d.UTCI_F; });
+                yScale.domain([minTemp, maxTemp]);
 
+		        nestschooldat = d3.nest() //nest by Alias 
+			        .key(function(d) { return d.Alias; })
+			        .entries(monthschooldata);
+                console.log(nestschooldat);
+                function key(d) {
+                    return d.key;
+                }             
 
+                var lines = linesvg.selectAll("svg")
+                    .data(nestschooldat, key);
 
+                lines.enter().append("path")
+                    .attr("class", "line")
+                    .attr("d", function(d) {return line(d.values); });
 
-            /*menu.property("value", "Ala Wai El");*/
-
-
-	    });	
-
-
-
-
-/*
-                buttons.on("click", function(d) {
-                    d3.select(".selected")
-                        .classed("selected", false);
-
-                    d3.select(this)
-                        .classed("selected", true);
-                    
-                    school = d;
-		    daily = data.filter(function(d) { return (d.School == school || d.School == "Outdoor"); });
-                    console.log(daily);
-
-
-                    var circles = svg.selectAll("circle")
-                        .data(daily.filter(function(d) { return (d.measure == "UTCI" && d.level != "Outdoor"); }), key)
-
-
-                    circles.enter()
-                        .append("circle")
-                        .attr({
-                            cx: function(d) { return xScale(d.Date); }, //first column
-                            cy: function(d) { return yScale(d.value); }, //second column
-                            r: 1.5,
-                            fill: function(d) {
-                                if (d.measure == "UTCI")
-                                    if (d.level == "Average") 
-                                        return "#30A2DA";
-                                    else 
-                                        return "#FC4F30";
-                            },
-                            opacity: 0.2
-                        })
-                        .on("mouseover", function(d) {		
-                            toolTip.transition()		
-                                .duration(200)		
-                                .style("opacity", .9);		
-                            toolTip.html(d.Alias + "<br/> UTCI: " + d3.round(d.value,2) + " &deg;F <br/>")	
-                                .style("left", (d3.event.pageX) + "px")		
-                                .style("top", (d3.event.pageY - 28) + "px");	
-                        })					
-                        .on("mouseout", function(d) {		
-                            toolTip.transition()		
-                                .duration(500)		
-                                .style("opacity", 0);	
-                        });
-
-                    circles.transition()
-                        .duration(500)
-                        .attr({
-                            cx: function(d) { return xScale(d.Date); }, //first column
-                            cy: function(d) { return yScale(d.value); }, //second column
-                            r: 1.5,
-                            fill: function(d) {
-                                if (d.measure == "UTCI")
-                                    if (d.level == "Average") 
-                                        return "#30A2DA";
-                                    else 
-                                        return "#FC4F30";
-                            },
-                            opacity: 0.2
-                        });
-
-
-
-                    circles.exit()
-                        .remove();
-
-
-                });
+                lines.transition()
+                    .duration(500)
+                    .attr("d", function(d) {return line(d.values); });
+                
+                lines.exit()
+                    .remove();
 
             });
-       */
+*/
+            
+            //UPDATE SELECTION
+/*            lines.transition()
+                .duration(500)
+                .attr("d", function(d) {return line(d.values); });*/
+  
+            d3.transition(svg).select(".y.axis")
+                .call(yAxis);
+
+
+            //EXIT SELECTION
+            lines.exit()
+                .remove();
+
+            //UPDATE LINES SELECTION
+/*            var line = lines.selectAll("svg")
+                .data(function(d) { return d.values; }, function(*/
+
+
+
+        }
+
+
+        function mousemove() {
+            var x0 = xScale.invert(d3.mouse(this)[0]);
+
+            var nKeys = d3.map(nestschooldat, function(d) { return d.key; }).size(); //number of classrooms 
+            for (var j=0; j < nKeys; j++) {
+                var i = bisectTime(nestschooldat[j].values, x0, 1),
+                    d0 = nestschooldat[j].values[i-1],
+                    d1 = nestschooldat[j].values[i],
+                    d = x0 - d0.Time > d1.Time - x0 ? d1 : d0;
+
+                focus.select("circle.y"+j)
+                    .attr("transform", "translate(" + xScale(d.Time) + "," + yScale(d.UTCI_F) + ")");
+                    
+                focus.selectAll("text.t"+j)
+                    .text(d.Alias + ": " + d3.round(d.UTCI_F,2) + "ºF")
+                    .attr("transform", "translate(" + xScale(d.Time) + "," + yScale(d.UTCI_F) + ")");
+            };
+        }
+
+
+
+
+                
+
 
         </script>
     </body>
