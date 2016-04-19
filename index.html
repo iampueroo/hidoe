@@ -388,6 +388,10 @@
 
             
             //UPDATE SELECTION
+            lines.transition()
+                    .duration(500)
+                    .attr("d", function(d) {return line(d.values); });
+
             d3.transition(svg).select(".y.axis")
                 .call(yAxis);
 
