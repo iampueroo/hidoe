@@ -24,9 +24,9 @@
 
             .line {
                 fill: none;
-                stroke: steelblue;
-                stroke-width: 0.6px;
-                opacity: 0.6;
+                stroke: #104E8B;
+                stroke-width: 1px;
+                opacity: 0.9;
             }
 
             .axis path,
@@ -42,6 +42,7 @@
                 font-size: 8px;
                 color: #535353;
                 stroke-width: 0.2px;
+                font-weight: lighter;
             }
 
             .button {
@@ -65,6 +66,28 @@
                 color: #535353;
             }
 
+            .checkbox-container {
+                width: 500;
+                margin-bottom: 20px;
+                margin-left: 20px;
+            }
+
+            .checkbox {
+                float: left;
+                margin-left: 20px;
+                font-weight: lighter;
+            }
+
+            select {
+                border: 0 !important;
+                font-weight: lighter;
+                font-size: 9px;
+                margin-left: 5px;
+            }
+
+            #menu {
+                font-size: 11px;
+            }
 
 
         </style>
@@ -72,13 +95,12 @@
     <body>
         <h2>Universal Thermal Climate Index Profile</h2>
 
-        <p id="chart">
-        <p id="menu">School: <select></select>
+        <p id="menu">Select school:<select></select>
         <script type="text/javascript">
 
-        var margin = {top: 50, right: 50, bottom: 50, left: 50};
-        var w = 1680 - margin.left - margin.right;
-        var h = 700 - margin.top - margin.bottom; 
+        var margin = {top: 20, right: 50, bottom: 50, left: 50};
+        var w = 1500 - margin.left - margin.right;
+        var h = 650 - margin.top - margin.bottom; 
         var parser = d3.time.format("%H:%M");
 
         var menu = d3.select("#menu select") //dropdown for school selection
@@ -87,6 +109,10 @@
         var buttons = d3.select("body") //buttons for months
             .append("div")
             .attr("class", "buttons-container");
+
+        var boxes = d3.select("body") //checkboxes for classrooms
+            .append("div")
+            .attr("class", "checkbox-container");
 
         bisectTime = d3.bisector(function(d) { return d.Time; }).left; //bisector used for rollover
         
@@ -99,6 +125,7 @@
                             .domain([minTime, maxTime])
                             .range([0,w]);
         var yScale = d3.scale.linear()
+                            .domain([70,90])
                             .range([h,0]);
 	                
         //create axes 
@@ -112,7 +139,7 @@
         var yAxis = d3.svg.axis()
             .scale(yScale)
             .orient("left")
-            .ticks(10)
+            .ticks(8)
             .tickSize(-2);
 
         var svg = d3.select("body") //create SVG element
@@ -138,7 +165,7 @@
             .attr("y", 0)
             .attr("width", xScale(parser.parse("6:00")))
             .attr("height", h)
-            .style("fill", "wheat")
+            .style("fill", "#F4EB8D")
             .style("opacity", 0.2);          
 
         svg.append("g")  //x-axis
@@ -152,7 +179,7 @@
                 .style("text-anchor", "end")
                 .text("average day");
 
-        svg.append("g")  // y-axis 
+        svg.append("g") //y-axis 
             .attr("class", "y axis") 
             .attr("transform", "translate(0,0)")
             .call(yAxis)
@@ -162,6 +189,15 @@
                 .attr("dy", ".71em")
                 .style("text-anchor", "end")
                 .text("UTCI (ºF)");
+
+        svg.append("rect") //append rectangle to capture mouse
+                .attr("width", w)
+                .attr("height", h)
+                    .style("fill", "none")
+                    .style("pointer-events", "all")
+            .on("mouseover", function() { focus.style("display", null); })
+            .on("mouseout", function() { focus.style("display", "none"); })
+            .on("mousemove", mousemove);
 
         function key(d) {
             // key for data updates 
@@ -209,7 +245,6 @@
         function update() {
             buttons.selectAll("div").remove(); //reset month buttons 
 
-
             school = menu.property("value");
             schooldata = rawdata.filter(function(d) { return (d.School == school); }) //restrict to school
 
@@ -217,7 +252,7 @@
             buttons.selectAll("div") //create buttons for months available by school
                 .data(d3.map(schooldata, function(d) { return d.Month; }).keys())
                 .enter().append("div")
-                .text(function(d) {return d; })
+                .text(function(d) { return d; })
                 .attr("class", function(d) {
                     if (d == month)
                         return "button selected";
@@ -225,52 +260,61 @@
                         return "button";
                 });
 
-            monthschooldata = schooldata.filter(function(d) { return (d.Month == month); });  //restrict to month clicked
-
-            minTemp = d3.min(monthschooldata, function(d) { return d.UTCI_F; }); //define y domain based on school max min UTCI values
-            maxTemp  = d3.max(monthschooldata, function(d) { return d.UTCI_F; });
+            minTemp = d3.min(schooldata, function(d) { return d.UTCI_F; }); //define y domain based on school max min UTCI values
+            maxTemp  = d3.max(schooldata, function(d) { return d.UTCI_F; });
             yScale.domain([minTemp-2, maxTemp+2]);
+
+
+            monthschooldata = schooldata.filter(function(d) { return (d.Month == month); });  //restrict to month clicked
+/*
+            boxes.selectAll("input")
+                .data(d3.map(monthschooldata, function(d) { return d.Alias; }).keys())
+                .enter().append("label")
+                    .text(function(d) { return d; })
+                    .attr("class", "checkbox")
+                .append("input")
+                    .attr("checked", true)
+                    .attr("type", "checkbox");
+                    //.attr("onClick", toggle);
+*/
 
 		    nestschooldat = d3.nest() //nest by Alias 
 			    .key(function(d) { return d.Alias; })
 			    .entries(monthschooldata);
 
-            //ENTER SELECTION
-            var lines = linesvg.selectAll("svg")
-                .data(nestschooldat);
+            function monthkey(d) {
+                return d.key;
+            }   
 
-            lines.enter().append("path")
-                        .attr("class", "line")
-                        .attr("d", function(d) {return line(d.values); }); 
-/*
-            focus.selectAll("svg")
-                .data(nestschooldat)
+
+            //ENTER SELECTION
+            var lines = linesvg.selectAll("path")
+                .data(nestschooldat, function(d) { return d.key; });
+
+            lines.enter()
+                .append("path")
+                    .attr("class", "line")
+                    .attr("d", function(d) {return line(d.values); })
+                .transition()
+                .duration(500);
+
+            focus.selectAll("circle")
+                .data(nestschooldat, function(d) { return d.key; })
                 .enter().append("circle") //append circle at intersection
                 .attr("class", function(d, i) { return ("y" + i); })
                     .style("fill", "none")
-                    .style("stroke", "steelblue")
+                    .style("stroke", "#104E8B")
                     .style("stroke-width", "0.4px")
                     .style("opacity", 0.6)
                     .style("r", 2);
 
-            focus.selectAll("svg")
-                .data(nestschooldat)
+            focus.selectAll("text")
+                .data(nestschooldat, function(d) { return d.key; })
                 .enter().append("text")
                 .attr("class", function(d, i) { return ("t" + i); })
                 .attr("x", 9)
                 .attr("dy", ".35em");
 
-            svg.selectAll("svg")
-                .data(nestschooldat)
-                .enter().append("rect") //append rectangle to capture mouse
-                    .attr("width", w)
-                    .attr("height", h)
-                        .style("fill", "none")
-                        .style("pointer-events", "all")
-                .on("mouseover", function() { focus.style("display", null); })
-                .on("mouseout", function() { focus.style("display", "none"); })
-                .on("mousemove", mousemove);
-*/
 
             // change month
             buttons.selectAll("div")
@@ -281,54 +325,87 @@
                     .classed("selected", true);
 
                 month = d;
-/*
                 monthschooldata = schooldata.filter(function(d) { return (d.Month == month); }); //update month
                 
-                var minTemp = d3.min(monthschooldata, function(d) { return d.UTCI_F; }); //define y domain based on school max min UTCI values
-                var maxTemp  = d3.max(monthschooldata, function(d) { return d.UTCI_F; });
-                yScale.domain([minTemp, maxTemp]);
-
 		        nestschooldat = d3.nest() //nest by Alias 
 			        .key(function(d) { return d.Alias; })
 			        .entries(monthschooldata);
-                console.log(nestschooldat);
-                function key(d) {
-                    return d.key;
-                }             
 
-                var lines = linesvg.selectAll("svg")
-                    .data(nestschooldat, key);
+                //ENTER
+                var lines = linesvg.selectAll("path")
+                    .data(nestschooldat, function(d ) { return d.key; });
 
-                lines.enter().append("path")
-                    .attr("class", "line")
-                    .attr("d", function(d) {return line(d.values); });
+                lines.enter()
+                    .append("path")
+                        .attr("class", "line")
+                        .attr("d", function(d) {return line(d.values); })
+                    .transition()
+                    .duration(500);
 
-                lines.transition()
+                focus.selectAll("circle")
+                    .data(nestschooldat, function(d) { return d.key; })
+                    .enter().append("circle") //append circle at intersection
+                    .attr("class", function(d, i) { return ("y" + i); })
+                        .style("fill", "none")
+                        .style("stroke", "#104E8B")
+                        .style("stroke-width", "0.4px")
+                        .style("opacity", 0.6)
+                        .style("r", 2);
+
+                focus.selectAll("text")
+                    .data(nestschooldat, function(d) { return d.key; })
+                    .enter().append("text")
+                    .attr("class", function(d, i) { return ("t" + i); })
+                    .attr("x", 9)
+                    .attr("dy", ".35em");
+
+               
+               //UPDATE
+               lines.transition()
                     .duration(500)
                     .attr("d", function(d) {return line(d.values); });
-                
+
+                d3.select(".y.axis")
+                    .transition()
+                    .duration(500)
+                    .call(yAxis);
+
+                //EXIT 
                 lines.exit()
                     .remove();
-*/
+
+                focus.selectAll("circle")
+                    .data(nestschooldat, function(d) { return d.key; })
+                    .exit()
+                    .remove();
+
+                focus.selectAll("text")
+                    .data(nestschooldat, function(d) { return d.key; })
+                    .exit()
+                    .remove();
+
             });
 
             
             //UPDATE SELECTION
-/*
-            lines.transition()
-                .duration(750)
-                .attr("d", function(d) {return line(d.values); });
- */ 
             d3.transition(svg).select(".y.axis")
                 .call(yAxis);
 
-/*
 
             //EXIT SELECTION
             lines.exit()
                 .remove();
 
-*/
+            focus.selectAll("circle")
+                .data(nestschooldat, function(d) { return d.key; })
+                .exit()
+                .remove();
+
+            focus.selectAll("text")
+                .data(nestschooldat, function(d) { return d.key; })
+                .exit()
+                .remove();
+
         }
 
 
