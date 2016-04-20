@@ -20,6 +20,7 @@
             p {
                 margin-left: 20px;
                 font-weight: bold;
+                margin-bottom: 10px;
             }
 
             .line {
@@ -45,6 +46,15 @@
                 font-weight: lighter;
             }
 
+            .grid .tick {
+                stroke: lightgrey;
+                opacity: 0.2;
+            }
+
+            .grid path {
+                stroke-width: 0;
+            }
+
             .button {
                 float: left;
                 margin-left: 20px;
@@ -54,7 +64,7 @@
 
             .buttons-container {
                 width: 500;
-                margin-bottom: 20px;
+                margin-bottom: 10px;
             }
 
             .selected {
@@ -69,7 +79,6 @@
             .checkbox-container {
                 width: 500;
                 margin-bottom: 20px;
-                margin-left: 20px;
             }
 
             .checkbox {
@@ -94,8 +103,8 @@
     </head>
     <body>
         <h2>Universal Thermal Climate Index Profile</h2>
+        <p id="menu">Select school:<select></select></p>
 
-        <p id="menu">Select school:<select></select>
         <script type="text/javascript">
 
         var margin = {top: 20, right: 50, bottom: 50, left: 50};
@@ -104,11 +113,13 @@
         var parser = d3.time.format("%H:%M");
 
         var menu = d3.select("#menu select") //dropdown for school selection
-            .on("change", change);
+            .on("change", changeschool);
 
         var buttons = d3.select("body") //buttons for months
             .append("div")
-            .attr("class", "buttons-container");
+            .attr("class", "buttons-container")
+            .on("click", changemonth);
+            
 
         var boxes = d3.select("body") //checkboxes for classrooms
             .append("div")
@@ -125,7 +136,7 @@
                             .domain([minTime, maxTime])
                             .range([0,w]);
         var yScale = d3.scale.linear()
-                            .domain([70,90])
+                            .domain([77, 93]) //min, max +/- 1 of first school
                             .range([h,0]);
 	                
         //create axes 
@@ -166,7 +177,8 @@
             .attr("width", xScale(parser.parse("6:00")))
             .attr("height", h)
             .style("fill", "#F4EB8D")
-            .style("opacity", 0.2);          
+            .style("opacity", 0.2);    
+
 
         svg.append("g")  //x-axis
             .attr("class", "x axis") 
@@ -190,6 +202,7 @@
                 .style("text-anchor", "end")
                 .text("UTCI (ºF)");
 
+
         svg.append("rect") //append rectangle to capture mouse
                 .attr("width", w)
                 .attr("height", h)
@@ -199,10 +212,7 @@
             .on("mouseout", function() { focus.style("display", "none"); })
             .on("mousemove", mousemove);
 
-        function key(d) {
-            // key for data updates 
-        }
-
+           
         // line function
         var line = d3.svg.line() 
             .x(function(d) { return xScale(d.Time); })
@@ -211,6 +221,8 @@
 
         /*------ do data things ---------*/
         var rawdata;
+        var school;
+        var month;
         d3.csv("data/d3-school.csv", function(error, data) { 
             if (error) return console.log(error);
 
@@ -225,32 +237,12 @@
                 .enter().append("option")
                 .text(function(d) { return d; });
             
-            menu.property("value", d3.map(rawdata, function(d) {return d.School; }).keys()[0]); //initialize school to first alphabetically
+            school =  d3.map(rawdata, function(d) {return d.School; }).keys()[0]; //initialize school to first alphabetically
+            temp = rawdata.filter(function(d) { return (d.School == school); });
+            month = d3.map(temp, function(d) {return d.Month; }).keys()[0]; //initialize month 
 
-            update();
-        });
-
-        var altKey;
-        d3.select(window)
-            .on("keydown", function() { altKey = d3.event.altKey; })
-            .on("keyup", function() { altKey = false; });
-
-        function change() {
-            d3.transition()
-                .duration(altKey ? 7500 : 750)
-                .each(update);
-        }
-
-        var nestschooldat;
-        function update() {
-            buttons.selectAll("div").remove(); //reset month buttons 
-
-            school = menu.property("value");
-            schooldata = rawdata.filter(function(d) { return (d.School == school); }) //restrict to school
-
-            month = d3.map(schooldata, function(d) {return d.Month; }).keys()[0]; //initialize month 
             buttons.selectAll("div") //create buttons for months available by school
-                .data(d3.map(schooldata, function(d) { return d.Month; }).keys())
+                .data(d3.map(temp, function(d) { return d.Month; }).keys())
                 .enter().append("div")
                 .text(function(d) { return d; })
                 .attr("class", function(d) {
@@ -259,13 +251,95 @@
                     else
                         return "button";
                 });
+            update();
+        });
 
-            minTemp = d3.min(schooldata, function(d) { return d.UTCI_F; }); //define y domain based on school max min UTCI values
-            maxTemp  = d3.max(schooldata, function(d) { return d.UTCI_F; });
-            yScale.domain([minTemp-2, maxTemp+2]);
+        var altKey;
+        d3.select(window)
+            .on("keydown", function() { altKey = d3.event.altKey; })
+            .on("keyup", function() { altKey = false; });
 
+        function changeschool() {
+            buttons.selectAll("div").remove(); //reset month buttons 
 
-            monthschooldata = schooldata.filter(function(d) { return (d.Month == month); });  //restrict to month clicked
+            school = menu.property("value");
+
+            data = rawdata.filter(function(d) { return (d.School == school); }); //restrict to school
+            initmonth = d3.map(data, function(d) {return d.Month; }).keys()[0]; //initialize month 
+
+            buttons.selectAll("div") //create buttons for months available by school
+                .data(d3.map(data, function(d) { return d.Month; }).keys())
+                .enter().append("div")
+                .text(function(d) { return d; })
+                .attr("class", function(d) {
+                    if (d == initmonth)
+                        return "button selected";
+                    else
+                        return "button";
+                });
+
+            minTemp = d3.min(data, function(d) { return d.UTCI_F; }); //define y domain based on school max min UTCI values
+            maxTemp  = d3.max(data, function(d) { return d.UTCI_F; });
+            yScale.domain([minTemp-1, maxTemp+1]);
+
+            d3.transition()
+                .duration(altKey ? 7500 : 750)
+                .each(update);
+        }
+
+        function changemonth() {
+            d3.select(".selected") //deselect
+                .classed("selected", false);
+            d3.select(this) //select
+                .classed("selected", true);
+            
+            month = this.value;
+            d3.transition()
+                .duration(altKey ? 7500 : 750)
+                .each(update);
+         }
+
+        var nesteddata;
+        function update() {
+            console.log(school);
+            console.log(month);
+            data = rawdata.filter(function(d) { return (d.School == school & d.Month == month); });
+
+            nesteddata = d3.nest() //nest by Alias
+                .key(function(d) { return d.Alias; })
+                .entries(data);
+
+            console.log(nesteddata);
+/*
+           //ENTER SELECTION
+            var lines = linesvg.selectAll("path")
+                .data(nesteddata, function(d) { return d.key; });
+
+            lines.enter()
+                .append("path")
+                    .attr("class", "line")
+                    .attr("d", function(d) {return line(d.values); })
+                .transition()
+                .duration(500);
+
+            focus.selectAll("circle")
+                .data(nesteddata, function(d) { return d.key; })
+                .enter().append("circle") //append circle at intersection
+                .attr("class", function(d, i) { return ("y" + i); })
+                    .style("fill", "none")
+                    .style("stroke", "#104E8B")
+                    .style("stroke-width", "0.4px")
+                    .style("opacity", 0.6)
+                    .style("r", 2);
+
+            focus.selectAll("text")
+                .data(nesteddata, function(d) { return d.key; })
+                .enter().append("text")
+                .attr("class", function(d, i) { return ("t" + i); })
+                .attr("x", 9)
+                .attr("dy", ".35em");
+*/
+
 /*
             boxes.selectAll("input")
                 .data(d3.map(monthschooldata, function(d) { return d.Alias; }).keys())
@@ -277,89 +351,7 @@
                     .attr("type", "checkbox");
                     //.attr("onClick", toggle);
 */
-
-		    nestschooldat = d3.nest() //nest by Alias 
-			    .key(function(d) { return d.Alias; })
-			    .entries(monthschooldata);
-
-            function monthkey(d) {
-                return d.key;
-            }   
-
-
-            //ENTER SELECTION
-            var lines = linesvg.selectAll("path")
-                .data(nestschooldat, function(d) { return d.key; });
-
-            lines.enter()
-                .append("path")
-                    .attr("class", "line")
-                    .attr("d", function(d) {return line(d.values); })
-                .transition()
-                .duration(500);
-
-            focus.selectAll("circle")
-                .data(nestschooldat, function(d) { return d.key; })
-                .enter().append("circle") //append circle at intersection
-                .attr("class", function(d, i) { return ("y" + i); })
-                    .style("fill", "none")
-                    .style("stroke", "#104E8B")
-                    .style("stroke-width", "0.4px")
-                    .style("opacity", 0.6)
-                    .style("r", 2);
-
-            focus.selectAll("text")
-                .data(nestschooldat, function(d) { return d.key; })
-                .enter().append("text")
-                .attr("class", function(d, i) { return ("t" + i); })
-                .attr("x", 9)
-                .attr("dy", ".35em");
-
-
-            // change month
-            buttons.selectAll("div")
-                .on("click", function(d) {
-                d3.select(".selected") //deselect
-                    .classed("selected", false);
-                d3.select(this) //select
-                    .classed("selected", true);
-
-                month = d;
-                monthschooldata = schooldata.filter(function(d) { return (d.Month == month); }); //update month
-                
-		        nestschooldat = d3.nest() //nest by Alias 
-			        .key(function(d) { return d.Alias; })
-			        .entries(monthschooldata);
-
-                //ENTER
-                var lines = linesvg.selectAll("path")
-                    .data(nestschooldat, function(d ) { return d.key; });
-
-                lines.enter()
-                    .append("path")
-                        .attr("class", "line")
-                        .attr("d", function(d) {return line(d.values); })
-                    .transition()
-                    .duration(500);
-
-                focus.selectAll("circle")
-                    .data(nestschooldat, function(d) { return d.key; })
-                    .enter().append("circle") //append circle at intersection
-                    .attr("class", function(d, i) { return ("y" + i); })
-                        .style("fill", "none")
-                        .style("stroke", "#104E8B")
-                        .style("stroke-width", "0.4px")
-                        .style("opacity", 0.6)
-                        .style("r", 2);
-
-                focus.selectAll("text")
-                    .data(nestschooldat, function(d) { return d.key; })
-                    .enter().append("text")
-                    .attr("class", function(d, i) { return ("t" + i); })
-                    .attr("x", 9)
-                    .attr("dy", ".35em");
-
-               
+/*
                //UPDATE
                lines.transition()
                     .duration(500)
@@ -375,52 +367,26 @@
                     .remove();
 
                 focus.selectAll("circle")
-                    .data(nestschooldat, function(d) { return d.key; })
+                    .data(nesteddata, function(d) { return d.key; })
                     .exit()
                     .remove();
 
                 focus.selectAll("text")
-                    .data(nestschooldat, function(d) { return d.key; })
+                    .data(nesteddata, function(d) { return d.key; })
                     .exit()
                     .remove();
-
-            });
-
-            
-            //UPDATE SELECTION
-            lines.transition()
-                    .duration(500)
-                    .attr("d", function(d) {return line(d.values); });
-
-            d3.transition(svg).select(".y.axis")
-                .call(yAxis);
-
-
-            //EXIT SELECTION
-            lines.exit()
-                .remove();
-
-            focus.selectAll("circle")
-                .data(nestschooldat, function(d) { return d.key; })
-                .exit()
-                .remove();
-
-            focus.selectAll("text")
-                .data(nestschooldat, function(d) { return d.key; })
-                .exit()
-                .remove();
-
+*/
         }
-
+          
 
         function mousemove() {
             var x0 = xScale.invert(d3.mouse(this)[0]);
 
-            var nKeys = d3.map(nestschooldat, function(d) { return d.key; }).size(); //number of classrooms 
+            var nKeys = d3.map(nesteddata, function(d) { return d.key; }).size(); //number of classrooms 
             for (var j=0; j < nKeys; j++) {
-                var i = bisectTime(nestschooldat[j].values, x0, 1),
-                    d0 = nestschooldat[j].values[i-1],
-                    d1 = nestschooldat[j].values[i],
+                var i = bisectTime(nesteddata[j].values, x0, 1),
+                    d0 = nesteddata[j].values[i-1],
+                    d1 = nesteddata[j].values[i],
                     d = x0 - d0.Time > d1.Time - x0 ? d1 : d0;
 
                 focus.select("circle.y"+j)
