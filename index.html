@@ -59,7 +59,7 @@
                 float: left;
                 margin-left: 20px;
                 font-weight: lighter;
-                cursor: pointer; 
+                cursor: pointer;
             }
 
             .buttons-container {
@@ -109,7 +109,7 @@
 
         var margin = {top: 20, right: 50, bottom: 50, left: 50};
         var w = 1500 - margin.left - margin.right;
-        var h = 650 - margin.top - margin.bottom; 
+        var h = 650 - margin.top - margin.bottom;
         var parser = d3.time.format("%H:%M");
 
         var menu = d3.select("#menu select") //dropdown for school selection
@@ -119,18 +119,18 @@
             .append("div")
             .attr("class", "buttons-container")
             .on("click", changemonth);
-            
+
 
         var boxes = d3.select("body") //checkboxes for classrooms
             .append("div")
             .attr("class", "checkbox-container");
 
         bisectTime = d3.bisector(function(d) { return d.Time; }).left; //bisector used for rollover
-        
+
         // x-axis limits
         minTime = parser.parse("00:00");
         maxTime = parser.parse("24:00");
-        
+
         //create scales
         var xScale =  d3.time.scale()
                             .domain([minTime, maxTime])
@@ -138,15 +138,15 @@
         var yScale = d3.scale.linear()
                             .domain([77, 93]) //min, max +/- 1 of first school
                             .range([h,0]);
-	                
-        //create axes 
+
+        //create axes
         var xAxis = d3.svg.axis()
             .scale(xScale)
             .orient("bottom")
             .ticks(15)
             .tickSize(2)
             .tickFormat(d3.time.format("%H:%M"));;
-        
+
         var yAxis = d3.svg.axis()
             .scale(yScale)
             .orient("left")
@@ -163,8 +163,8 @@
                 .attr("height", h);
 
 
-        var linesvg = svg.append("g") //lines 
-            .attr("class", "lines"); 
+        var linesvg = svg.append("g") //lines
+            .attr("class", "lines");
 
         var focus = svg.append("g") //mouseovers
             .attr("class", "focus")
@@ -177,11 +177,11 @@
             .attr("width", xScale(parser.parse("6:00")))
             .attr("height", h)
             .style("fill", "#F4EB8D")
-            .style("opacity", 0.2);    
+            .style("opacity", 0.2);
 
 
         svg.append("g")  //x-axis
-            .attr("class", "x axis") 
+            .attr("class", "x axis")
             .attr("transform", "translate(0," + h + ")")
             .call(xAxis)
             .append("text")
@@ -191,8 +191,8 @@
                 .style("text-anchor", "end")
                 .text("average day");
 
-        svg.append("g") //y-axis 
-            .attr("class", "y axis") 
+        svg.append("g") //y-axis
+            .attr("class", "y axis")
             .attr("transform", "translate(0,0)")
             .call(yAxis)
             .append("text")
@@ -212,9 +212,9 @@
             .on("mouseout", function() { focus.style("display", "none"); })
             .on("mousemove", mousemove);
 
-           
+
         // line function
-        var line = d3.svg.line() 
+        var line = d3.svg.line()
             .x(function(d) { return xScale(d.Time); })
             .y(function(d) { return yScale(d.UTCI_F); });
 
@@ -223,11 +223,11 @@
         var rawdata;
         var school;
         var month;
-        d3.csv("data/d3-school.csv", function(error, data) { 
+        d3.csv("data/d3-school.csv", function(error, data) {
             if (error) return console.log(error);
 
             rawdata = data;
-            rawdata.forEach (function(d) { 
+            rawdata.forEach (function(d) {
                 d.Time = parser.parse(d.Time); //convert to time format
 		       	d.UTCI_F= +d.UTCI_F; //convert to numeric
             });
@@ -236,10 +236,10 @@
                 .data(d3.map(rawdata, function(d) { return d.School; }).keys())
                 .enter().append("option")
                 .text(function(d) { return d; });
-            
+
             school =  d3.map(rawdata, function(d) {return d.School; }).keys()[0]; //initialize school to first alphabetically
             temp = rawdata.filter(function(d) { return (d.School == school); });
-            month = d3.map(temp, function(d) {return d.Month; }).keys()[0]; //initialize month 
+            month = d3.map(temp, function(d) {return d.Month; }).keys()[0]; //initialize month
 
             buttons.selectAll("div") //create buttons for months available by school
                 .data(d3.map(temp, function(d) { return d.Month; }).keys())
@@ -260,12 +260,12 @@
             .on("keyup", function() { altKey = false; });
 
         function changeschool() {
-            buttons.selectAll("div").remove(); //reset month buttons 
+            buttons.selectAll("div").remove(); //reset month buttons
 
             school = menu.property("value");
 
             data = rawdata.filter(function(d) { return (d.School == school); }); //restrict to school
-            initmonth = d3.map(data, function(d) {return d.Month; }).keys()[0]; //initialize month 
+            initmonth = d3.map(data, function(d) {return d.Month; }).keys()[0]; //initialize month
 
             buttons.selectAll("div") //create buttons for months available by school
                 .data(d3.map(data, function(d) { return d.Month; }).keys())
@@ -288,12 +288,11 @@
         }
 
         function changemonth() {
+            var dis = d3.select(d3.event.target);
             d3.select(".selected") //deselect
                 .classed("selected", false);
-            d3.select(this) //select
-                .classed("selected", true);
-            
-            month = this.value;
+            dis.classed("selected", true); //select
+            month = dis.text();
             d3.transition()
                 .duration(altKey ? 7500 : 750)
                 .each(update);
@@ -362,7 +361,7 @@
                     .duration(500)
                     .call(yAxis);
 
-                //EXIT 
+                //EXIT
                 lines.exit()
                     .remove();
 
@@ -377,12 +376,12 @@
                     .remove();
 */
         }
-          
+
 
         function mousemove() {
             var x0 = xScale.invert(d3.mouse(this)[0]);
 
-            var nKeys = d3.map(nesteddata, function(d) { return d.key; }).size(); //number of classrooms 
+            var nKeys = d3.map(nesteddata, function(d) { return d.key; }).size(); //number of classrooms
             for (var j=0; j < nKeys; j++) {
                 var i = bisectTime(nesteddata[j].values, x0, 1),
                     d0 = nesteddata[j].values[i-1],
@@ -391,7 +390,7 @@
 
                 focus.select("circle.y"+j)
                     .attr("transform", "translate(" + xScale(d.Time) + "," + yScale(d.UTCI_F) + ")");
-                    
+
                 focus.selectAll("text.t"+j)
                     .text(d.Alias + ": " + d3.round(d.UTCI_F,2) + "ºF")
                     .attr("transform", "translate(" + xScale(d.Time) + "," + yScale(d.UTCI_F) + ")");
@@ -401,7 +400,7 @@
 
 
 
-                
+
 
 
         </script>
